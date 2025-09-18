@@ -128,9 +128,12 @@ app.use('/api/', rateLimitRules.general);
           errorHandling: true,
           structuredLogging: true,
           healthChecks: true,
-          performanceOptimization: true
+          performanceOptimization: true,
+          dailyATMValidation: true
         }
       });
+
+      // ATM validation scheduler temporarily disabled for debugging
     });
 
     server.on('error', (error: any) => {

@@ -46,6 +46,49 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
   const isPositiveChange = ticker.priceChange >= 0;
   const { isNative, triggerHaptics } = useCapacitor();
   
+  // Fetch individual IV values for the specific strikes
+  const [individualIV, setIndividualIV] = useState<{ callIV: number; putIV: number } | null>(null);
+  
+  // Fetch individual IV values when component mounts or ticker changes
+  useEffect(() => {
+    const fetchIndividualIV = async () => {
+      try {
+        const response = await fetch(`/api/market-data/options-chain/${ticker.symbol}?expiration=${position.expirationDate}`, {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const chainData = await response.json();
+          const expiration = position.expirationDate;
+          
+          if (chainData.chains && chainData.chains[expiration]) {
+            const { calls, puts } = chainData.chains[expiration];
+            
+            // Find the specific call and put strikes from our position
+            const callStrike = position.strategyType === 'short_strangle' ? 
+              (position.shortCallStrike || position.longCallStrike) : position.longCallStrike;
+            const putStrike = position.strategyType === 'short_strangle' ? 
+              (position.shortPutStrike || position.longPutStrike) : position.longPutStrike;
+            
+            const selectedCall = calls.find((c: any) => c.strike === callStrike);
+            const selectedPut = puts.find((p: any) => p.strike === putStrike);
+            
+            if (selectedCall && selectedPut) {
+              setIndividualIV({
+                callIV: (selectedCall.impliedVolatility || 0) * 100, // Convert to percentage
+                putIV: (selectedPut.impliedVolatility || 0) * 100    // Convert to percentage
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Could not fetch individual IV values:', error);
+      }
+    };
+    
+    fetchIndividualIV();
+  }, [ticker.symbol, position.expirationDate, position.longCallStrike, position.longPutStrike]);
+  
   // Debug strategy type issues
   console.log(`🎯 TickerCard Debug for ${ticker.symbol}:`, {
     strategyType: position?.strategyType,
@@ -316,7 +359,7 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
           {position.daysToExpiry}d to expiration
         </div>
         <div className="text-xs text-muted-foreground">
-          {new Date(position.expirationDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })} (Fri)
+          {new Date(position.expirationDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit', weekday: 'short' })}
         </div>
       </div>
 
@@ -446,28 +489,92 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
 
       {/* 4-Box Metrics Grid */}
       <div className="grid grid-cols-4 gap-3 mb-4">
-        <div className="bg-orange-50 border border-orange-200 p-3 rounded-lg text-center">
+        <div className="bg-orange-50 border border-orange-200 p-3 rounded-lg text-center relative group cursor-help">
           <div className="text-xs text-orange-700 font-medium uppercase tracking-wide">MAX LOSS</div>
           <div className="text-lg font-bold text-orange-800" data-testid={`text-max-loss-${ticker.symbol}`}>
             {position.maxLoss === Number.MAX_SAFE_INTEGER ? 'Unlimited' : `$${position.maxLoss.toLocaleString()}`}
           </div>
+          
+          {/* Max Loss Tooltip */}
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 w-64">
+            <div className="font-semibold mb-1">Maximum Loss: {position.maxLoss === Number.MAX_SAFE_INTEGER ? 'Unlimited' : `$${position.maxLoss.toLocaleString()}`}</div>
+            <div className="mb-2">
+              {position.maxLoss === Number.MAX_SAFE_INTEGER ? 
+                'This strategy has unlimited loss potential if the stock moves significantly against your position.' :
+                `The most you can lose if ${ticker.symbol} stays between your strikes at expiration.`
+              }
+            </div>
+            <div className="text-xs text-gray-300">
+              {position.maxLoss !== Number.MAX_SAFE_INTEGER && 
+                `This equals the total premium paid: $${((position.longCallPremium + position.longPutPremium) * 100).toFixed(0)} per contract.`
+              }
+            </div>
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+          </div>
         </div>
-        <div className="bg-gray-50 border border-gray-200 p-3 rounded-lg text-center">
+        <div className="bg-gray-50 border border-gray-200 p-3 rounded-lg text-center relative group cursor-help">
           <div className="text-xs text-gray-600 font-medium uppercase tracking-wide">ATM VALUE</div>
           <div className="text-lg font-bold text-gray-800" data-testid={`text-atm-value-${ticker.symbol}`}>
             ${position.atmValue.toFixed(2)}
           </div>
+          
+          {/* ATM Value Tooltip */}
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 w-64">
+            <div className="font-semibold mb-1">At-The-Money Value: ${position.atmValue.toFixed(2)}</div>
+            <div className="mb-2">
+              The baseline stock price for this options cycle. Gets reset every Friday when positions expire to track movement from the new starting point.
+            </div>
+            <div className="text-xs text-gray-300">
+              Current price: ${ticker.currentPrice.toFixed(2)} ({ticker.currentPrice > position.atmValue ? '+' : ''}${(ticker.currentPrice - position.atmValue).toFixed(2)} from ATM baseline)
+            </div>
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+          </div>
         </div>
-        <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-center">
+        <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-center relative group cursor-help">
           <div className="text-xs text-blue-700 font-medium uppercase tracking-wide">IMPL VOL</div>
           <div className="text-lg font-bold text-blue-800" data-testid={`text-implied-vol-${ticker.symbol}`}>
             {position.impliedVolatility.toFixed(1)}%
           </div>
+          
+          {/* Implied Volatility Tooltip */}
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 w-64">
+            <div className="font-semibold mb-1">Implied Volatility: {position.impliedVolatility.toFixed(1)}%</div>
+            <div className="mb-2">
+              The market's expectation of how much {ticker.symbol} will move. Higher IV = more expensive options.
+            </div>
+            <div className="text-xs text-gray-300">
+              This is the average IV of your selected call (${position.strategyType === 'short_strangle' ? (position.shortCallStrike || position.longCallStrike) : position.longCallStrike}) and put (${position.strategyType === 'short_strangle' ? (position.shortPutStrike || position.longPutStrike) : position.longPutStrike}) strikes.
+            </div>
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+          </div>
         </div>
-        <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg text-center">
-          <div className="text-xs text-purple-700 font-medium uppercase tracking-wide">IV %ILE</div>
+        <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg text-center relative group cursor-help">
+          <div className="text-xs text-purple-700 font-medium uppercase tracking-wide">IV %</div>
           <div className="text-lg font-bold text-purple-800" data-testid={`text-iv-percentile-${ticker.symbol}`}>
             {position.ivPercentile.toFixed(0)}%
+          </div>
+          
+          {/* IV Percentile Tooltip */}
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 w-64">
+            <div className="font-semibold mb-1">{ticker.symbol} IV Percentile: {position.ivPercentile.toFixed(0)}%</div>
+            <div className="mb-2">
+              {position.ivPercentile <= 20 ? (
+                <span className="text-green-300">🟢 Very Low - Cheap volatility, good time to buy options</span>
+              ) : position.ivPercentile <= 40 ? (
+                <span className="text-yellow-300">🟡 Low - Below average volatility</span>
+              ) : position.ivPercentile <= 60 ? (
+                <span className="text-blue-300">🔵 Average - Normal volatility range</span>
+              ) : position.ivPercentile <= 80 ? (
+                <span className="text-orange-300">🟠 High - Above average volatility</span>
+              ) : (
+                <span className="text-red-300">🔴 Very High - Expensive volatility, consider selling</span>
+              )}
+            </div>
+            <div className="text-xs text-gray-300">
+              Current IV: {position.impliedVolatility.toFixed(1)}% is in the {position.ivPercentile.toFixed(0)}th percentile of {ticker.symbol}'s typical range
+            </div>
+            {/* Tooltip arrow */}
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
           </div>
         </div>
       </div>
@@ -593,7 +700,7 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">IV</span>
-              <span className="font-medium">{position.impliedVolatility.toFixed(1)}%</span>
+              <span className="font-medium">{(individualIV?.callIV || position.callIV || position.impliedVolatility).toFixed(1)}%</span>
             </div>
           </div>
         </div>
@@ -606,7 +713,7 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">IV</span>
-              <span className="font-medium">{position.impliedVolatility.toFixed(1)}%</span>
+              <span className="font-medium">{(individualIV?.putIV || position.putIV || position.impliedVolatility).toFixed(1)}%</span>
             </div>
           </div>
         </div>

@@ -157,6 +157,60 @@ function getNextOptionsExpiration(): { date: string, days: number, type: 'weekly
  */
 export function registerLegacyRoutes(app: Express): void {
 
+  // SIMPLE ATM FIX - Direct endpoint in legacy routes
+  app.get('/api/fix-atm-now', async (req: any, res) => {
+    try {
+      console.log('🔧 DIRECT ATM FIX: Starting...');
+      
+      const { storage } = await import('../storage');
+      const userId = '5630d6b1-42b4-43bd-8669-d554281a5e1b';
+      
+      console.log('🔧 Getting tickers...');
+      const tickers = await storage.getActiveTickersWithPositionsForUser(userId);
+      console.log(`🔧 Found ${tickers.length} tickers`);
+      
+      if (tickers.length === 0) {
+        return res.json({ message: 'No tickers found', updated: 0 });
+      }
+
+      // Historical prices from last Friday
+      const historicalPrices = {
+        'NVDA': 170.29,
+        'QQQ': 590.00,   
+        'AAPL': 239.99
+      };
+      
+      let updated = 0;
+      for (const ticker of tickers) {
+        const historicalPrice = historicalPrices[ticker.symbol as keyof typeof historicalPrices];
+        if (historicalPrice && ticker.position) {
+          console.log(`🔧 Updating ${ticker.symbol}: ${ticker.position.atmValue} → ${historicalPrice}`);
+          
+          await storage.updatePosition(ticker.position.id, userId, {
+            atmValue: historicalPrice,
+          });
+          
+          updated++;
+          console.log(`✅ Updated ${ticker.symbol} ATM to $${historicalPrice}`);
+        }
+      }
+      
+      console.log(`🎉 Updated ${updated} positions`);
+      res.json({
+        success: true,
+        message: `Updated ${updated} ATM values`,
+        updated
+      });
+      
+    } catch (error) {
+      console.error('❌ ATM fix error:', error);
+      res.status(500).json({ 
+        error: 'Failed to fix ATM values',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // DIRECT FIX: Update NVDA with exact market prices from user screenshot
   app.post("/api/fix-nvda-direct", requireAuth, rateLimitRules.general, async (req: any, res) => {
     try {

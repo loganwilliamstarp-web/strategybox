@@ -81,26 +81,9 @@ export function setupWebSocket(httpServer: Server): void {
           if (userId) {
             const tickers = await storage.getActiveTickersWithPositionsForUser(userId);
             
-            // Add expected moves to tickers
-            const tickersWithExpectedMoves = tickers.map(ticker => {
-              const expectedMove = calculateExpectedMove(
-                ticker.currentPrice,
-                ticker.position.impliedVolatility,
-                30 // Use 30-day standard for expected moves regardless of actual expiry
-              );
-              
-              return {
-                ...ticker,
-                position: {
-                  ...ticker.position,
-                  expectedMove
-                }
-              };
-            });
-            
             ws.send(JSON.stringify({
               type: 'initial_data',
-              tickers: tickersWithExpectedMoves
+              tickers: tickers // expectedMove now comes from database
             }));
             
             console.log(`User ${userId} authenticated for real-time updates`);
@@ -243,13 +226,15 @@ export function setupWebSocket(httpServer: Server): void {
                     const callPremium = (currentCallOption.bid + currentCallOption.ask) / 2;
                     const putPremium = (currentPutOption.bid + currentPutOption.ask) / 2;
                     
-                    // Update position with fresh premiums
+                    // Update position with fresh premiums and current ATM value
                     await storage.updatePosition(ticker.position.id, userId, {
                       longCallPremium: Math.round(callPremium * 100) / 100,
                       longPutPremium: Math.round(putPremium * 100) / 100,
                       maxLoss: Math.round((callPremium + putPremium) * 100),
                       lowerBreakeven: Math.round((ticker.position.longPutStrike - (callPremium + putPremium)) * 100) / 100,
                       upperBreakeven: Math.round((ticker.position.longCallStrike + (callPremium + putPremium)) * 100) / 100,
+                      // Update ATM value on Fridays (expiration day) to reset baseline for next cycle
+                      ...(new Date().getDay() === 5 ? { atmValue: ticker.currentPrice } : {})
                     });
                     
                     console.log(`✅ 15-min update: ${ticker.symbol} premiums refreshed`);

@@ -139,12 +139,21 @@ export function registerRefreshRoutes(app: Express): void {
                 impliedVolatility: marketData.impliedVolatility,
                 ivPercentile: marketData.ivPercentile,
                 daysToExpiry: correctDaysToExpiry,
-                atmValue: ticker.currentPrice, // Update ATM value with current stock price
+                // ATM value should remain locked to original position creation price
                 longPutStrike: marketData.putStrike,
                 longCallStrike: marketData.callStrike,
                 longPutPremium: marketData.putPremium,
                 longCallPremium: marketData.callPremium,
                 maxLoss: Math.round((marketData.putPremium + marketData.callPremium) * 100),
+                // Store individual leg IV values for accurate display
+                callIV: marketData.callIV,
+                putIV: marketData.putIV,
+                // Store expected move data for fast loading
+                expectedMoveWeeklyLow: marketData.expectedMove?.weeklyLow,
+                expectedMoveWeeklyHigh: marketData.expectedMove?.weeklyHigh,
+                expectedMoveDailyMove: marketData.expectedMove?.dailyMove,
+                expectedMoveWeeklyMove: marketData.expectedMove?.weeklyMove,
+                expectedMoveMovePercentage: marketData.expectedMove?.movePercentage,
               });
               
               console.log(`✅ Updated ${ticker.symbol}: IV=${marketData.impliedVolatility.toFixed(1)}%, Days=${correctDaysToExpiry}d, ATM=${ticker.currentPrice}`);

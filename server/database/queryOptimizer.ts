@@ -49,6 +49,15 @@ export class QueryOptimizer {
           ivPercentile: longStranglePositions.ivPercentile,
           daysToExpiry: longStranglePositions.daysToExpiry,
           expirationDate: longStranglePositions.expirationDate,
+          // Individual IV values (temporarily disabled)
+          // callIV: longStranglePositions.callIV,
+          // putIV: longStranglePositions.putIV,
+          // Expected move fields (temporarily disabled)
+          // expectedMoveWeeklyLow: longStranglePositions.expectedMoveWeeklyLow,
+          // expectedMoveWeeklyHigh: longStranglePositions.expectedMoveWeeklyHigh,
+          // expectedMoveDailyMove: longStranglePositions.expectedMoveDailyMove,
+          // expectedMoveWeeklyMove: longStranglePositions.expectedMoveWeeklyMove,
+          // expectedMoveMovePercentage: longStranglePositions.expectedMoveMovePercentage,
           strikesManuallySelected: longStranglePositions.strikesManuallySelected,
           customCallStrike: longStranglePositions.customCallStrike,
           customPutStrike: longStranglePositions.customPutStrike,
@@ -102,6 +111,17 @@ export class QueryOptimizer {
           ivPercentile: row.ivPercentile,
           daysToExpiry: row.daysToExpiry,
           expirationDate: row.expirationDate,
+          // Individual IV values (temporarily disabled)
+          // callIV: row.callIV,
+          // putIV: row.putIV,
+          // Reconstruct expectedMove object from database fields (temporarily disabled)
+          // expectedMove: row.expectedMoveWeeklyLow && row.expectedMoveWeeklyHigh ? {
+          //   weeklyLow: row.expectedMoveWeeklyLow,
+          //   weeklyHigh: row.expectedMoveWeeklyHigh,
+          //   dailyMove: row.expectedMoveDailyMove || 0,
+          //   weeklyMove: row.expectedMoveWeeklyMove || 0,
+          //   movePercentage: row.expectedMoveMovePercentage || 0
+          // } : undefined,
           strikesManuallySelected: row.strikesManuallySelected,
           customCallStrike: row.customCallStrike,
           customPutStrike: row.customPutStrike,

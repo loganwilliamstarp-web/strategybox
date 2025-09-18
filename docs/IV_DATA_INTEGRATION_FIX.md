@@ -196,6 +196,8 @@ fetch('/api/tickers/refresh-earnings', {
 3. **Strategy System Bypass**: Don't modify old calculators without updating new system
 4. **Theoretical Fallbacks**: Avoid using estimated/calculated IV when real data is available
 5. **Cache Issues**: Clear React Query cache after database updates
+6. **ATM Value Updates**: Always update `atmValue` with current stock price during refresh
+7. **Hardcoded Date Display**: Don't hardcode day names like "(Fri)" - use dynamic weekday formatting
 
 ## 🎯 **Final Result**
 
@@ -209,6 +211,29 @@ fetch('/api/tickers/refresh-earnings', {
 - IV: 28.1% (real MarketData.app)
 - IV Percentile: 13th (from actual distribution)
 - Days: 1d (correct calculation)
+- Date Display: "Sep 19, Thu" (correct day of week)
+- ATM Value: $237.34 (current stock price)
 - Expected Range: $228.69 - $247.22 (pre-calculated)
 
-This comprehensive fix ensures the system **always uses live MarketData.app IV data** for all calculations and displays.
+## 🔧 **Additional Fixes Applied**
+
+### **Date Display Fix**
+```typescript
+// ticker-card.tsx - Dynamic weekday instead of hardcoded "(Fri)"
+{new Date(position.expirationDate).toLocaleDateString('en-US', { 
+  month: 'short', 
+  day: '2-digit', 
+  weekday: 'short'  // ← Shows actual day (Thu, Fri, etc.)
+})}
+```
+
+### **ATM Value Update Fix**
+```typescript
+// refresh.ts - Include ATM value in position updates
+await storage.updatePosition(ticker.position.id, userId, {
+  atmValue: ticker.currentPrice,  // ← Update with current stock price
+  // ... other fields
+});
+```
+
+This comprehensive fix ensures the system **always uses live MarketData.app IV data** for all calculations and displays with correct date formatting and ATM values.

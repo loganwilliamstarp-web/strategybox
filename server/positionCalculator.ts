@@ -152,7 +152,7 @@ export class LongStrangleCalculator {
     currentPrice: number,
     storage: any,
     expirationDate?: string
-  ): Promise<{ putStrike: number; callStrike: number; putPremium: number; callPremium: number; impliedVolatility: number; ivPercentile: number; expectedMove: any } | null> {
+  ): Promise<{ putStrike: number; callStrike: number; putPremium: number; callPremium: number; impliedVolatility: number; ivPercentile: number; expectedMove: any; callIV: number; putIV: number } | null> {
     try {
       const { optionsApiService } = await import('./optionsApiService');
       
@@ -336,7 +336,10 @@ export class LongStrangleCalculator {
         callPremium,
         impliedVolatility: averageIV,
         ivPercentile,
-        expectedMove
+        expectedMove,
+        // Individual leg IV data for accurate display
+        callIV: callIV * 100,  // Convert to percentage
+        putIV: putIV * 100     // Convert to percentage
       };
     } catch (error) {
       console.log(`⚠️ MarketData.app options chain error for ${symbol}:`, error instanceof Error ? error.message : 'Unknown error');

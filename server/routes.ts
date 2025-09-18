@@ -324,45 +324,14 @@ export function registerRoutes(app: Express): Server {
           }
         }
         
-        // Return updated data with expected moves
+        // Return updated data (expectedMove now comes from database)
         const updatedTickers = await storage.getActiveTickersWithPositionsForUser(userId);
-        const tickersWithExpectedMoves = updatedTickers.map(ticker => {
-          const expectedMove = calculateExpectedMove(
-            ticker.currentPrice,
-            ticker.position.impliedVolatility,
-            30 // Use 30-day standard for expected moves regardless of actual expiry
-          );
-          
-          return {
-            ...ticker,
-            position: {
-              ...ticker.position,
-              expectedMove
-            }
-          };
-        });
-        res.json(tickersWithExpectedMoves);
+        res.json(updatedTickers);
         return;
       }
       
-      // Add expected moves to all tickers
-      const tickersWithExpectedMoves = tickers.map(ticker => {
-        const expectedMove = calculateExpectedMove(
-          ticker.currentPrice,
-          ticker.position.impliedVolatility,
-          30 // Use 30-day standard for expected moves regardless of actual expiry
-        );
-        
-        return {
-          ...ticker,
-          position: {
-            ...ticker.position,
-            expectedMove
-          }
-        };
-      });
-      
-      res.json(tickersWithExpectedMoves);
+      // Return tickers (expectedMove now comes from database)
+      res.json(tickers);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch tickers" });
     }

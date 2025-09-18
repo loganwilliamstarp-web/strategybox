@@ -146,10 +146,11 @@ export function registerTickerRoutes(app: Express): void {
             if (marketData) {
               console.log(`✅ NEW IV DATA for ${ticker.symbol}: ${marketData.impliedVolatility.toFixed(1)}% (${marketData.ivPercentile}th percentile)`);
               
-              // Update position with new IV data
+              // Update position with new IV data (preserve ATM baseline)
               await storage.updatePosition(ticker.position.id, userId, {
                 impliedVolatility: marketData.impliedVolatility,
                 ivPercentile: marketData.ivPercentile,
+                // ATM value preserved - only updated on Fridays via WebSocket
                 longPutStrike: marketData.putStrike,
                 longCallStrike: marketData.callStrike,
                 longPutPremium: marketData.putPremium,
