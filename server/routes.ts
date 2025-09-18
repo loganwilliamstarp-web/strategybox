@@ -1409,7 +1409,8 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
     }
   });
 
-  // Refresh earnings data, prices, and options pricing
+  // DISABLED: Refresh earnings endpoint moved to refresh.ts with comprehensive IV updates
+  /*
   app.post("/api/tickers/refresh-earnings", requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
@@ -1575,6 +1576,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
       });
     }
   });
+  */
 
   // Options Chain routes
   app.get("/api/options/:symbol", requireAuth, async (req: any, res) => {

@@ -35,11 +35,34 @@ export class StrategyCalculatorAdapter {
         expirationDate: inputs.expirationDate
       };
 
-      // If no options chain provided, fetch it
+      // If no options chain provided, fetch it with real IV data
       if (!marketData.optionsChain && inputs.symbol) {
-        console.log(`📊 Fetching options chain for ${inputs.symbol}...`);
-        const { optionsApiService } = await import('../optionsApiService');
-        marketData.optionsChain = await optionsApiService.getOptionsChain(inputs.symbol, inputs.currentPrice);
+        console.log(`📊 Fetching options chain with IV data for ${inputs.symbol}...`);
+        
+        // Use our enhanced method that extracts real IV data
+        const { LongStrangleCalculator } = await import('../positionCalculator');
+        const realMarketData = await LongStrangleCalculator.getOptimalStrikesFromChain(
+          inputs.symbol,
+          inputs.currentPrice,
+          null, // storage not needed for IV extraction
+          inputs.expirationDate
+        );
+        
+        if (realMarketData) {
+          console.log(`✅ Got real IV data: ${realMarketData.impliedVolatility}% (${realMarketData.ivPercentile}th percentile)`);
+          
+          // Update strategy inputs with real IV data
+          strategyInputs.impliedVolatility = realMarketData.impliedVolatility;
+          strategyInputs.ivPercentile = realMarketData.ivPercentile;
+          
+          // Also get the options chain for strike selection
+          const { optionsApiService } = await import('../optionsApiService');
+          marketData.optionsChain = await optionsApiService.getOptionsChain(inputs.symbol, inputs.currentPrice);
+        } else {
+          // Fallback to regular options chain
+          const { optionsApiService } = await import('../optionsApiService');
+          marketData.optionsChain = await optionsApiService.getOptionsChain(inputs.symbol, inputs.currentPrice);
+        }
       }
 
       if (!marketData.optionsChain) {

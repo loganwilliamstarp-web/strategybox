@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trigger IV Update</title>
+</head>
+<body>
+    <h1>StrategyBox IV Update</h1>
+    <button onclick="updateIV()">Update IV Data</button>
+    <div id="result"></div>
+
+    <script>
+        async function updateIV() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Updating IV data...';
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/tickers?updateiv=true', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                resultDiv.innerHTML = '<h3>✅ IV Update Complete!</h3><p>Updated ' + data.length + ' positions with real MarketData.app IV values.</p>';
+                
+                // Show first ticker as example
+                if (data.length > 0) {
+                    const firstTicker = data[0];
+                    resultDiv.innerHTML += '<h4>Example: ' + firstTicker.symbol + '</h4>';
+                    resultDiv.innerHTML += '<p>IV: ' + firstTicker.position.impliedVolatility + '%</p>';
+                    resultDiv.innerHTML += '<p>IV Percentile: ' + firstTicker.position.ivPercentile + 'th</p>';
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = 'Error: ' + error.message;
+                console.error('Full error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

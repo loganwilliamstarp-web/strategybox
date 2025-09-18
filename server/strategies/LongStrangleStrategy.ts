@@ -87,10 +87,35 @@ export class LongStrangleStrategy extends BaseOptionsStrategy {
   }
 
   /**
+   * Extract real implied volatility from options data
+   */
+  private extractImpliedVolatility(data: StrikePremiumData, inputs: BaseStrategyInputs): { iv: number, percentile: number } {
+    // If IV is explicitly provided in inputs (from MarketData.app), use it
+    if (inputs.impliedVolatility && inputs.impliedVolatility > 0) {
+      console.log(`✅ Using real MarketData.app IV: ${inputs.impliedVolatility}% (${inputs.ivPercentile}th percentile)`);
+      return {
+        iv: inputs.impliedVolatility,
+        percentile: inputs.ivPercentile || 50
+      };
+    }
+
+    // Fallback to default values if no real IV data available
+    console.log('⚠️ No real IV data available, using fallback values');
+    return {
+      iv: 25, // Fallback value
+      percentile: 50 // Fallback value
+    };
+  }
+
+  /**
    * Calculate Long Strangle position metrics
    */
   calculatePosition(inputs: BaseStrategyInputs, data: StrikePremiumData): StrategyResult {
-    const { currentPrice, daysToExpiry, expirationDate, impliedVolatility = 25, ivPercentile = 50 } = inputs;
+    // Extract real IV from the options data if available, otherwise use provided values or defaults
+    const realIV = this.extractImpliedVolatility(data, inputs);
+    const { currentPrice, daysToExpiry, expirationDate } = inputs;
+    const impliedVolatility = realIV.iv;
+    const ivPercentile = realIV.percentile;
     const { longPutStrike, longCallStrike, longPutPremium, longCallPremium } = data;
 
     if (!longPutStrike || !longCallStrike || !longPutPremium || !longCallPremium) {

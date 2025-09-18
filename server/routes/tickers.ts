@@ -116,10 +116,59 @@ export function registerTickerRoutes(app: Express): void {
       const userId = req.user.id;
       const tickers = await storage.getActiveTickersWithPositionsForUser(userId);
       
-      // TEMPORARILY DISABLE auto-recalculation to prevent strategy type override
-      const shouldRecalculate = false;
+      // Check for query parameters to force updates
+      const shouldRecalculate = req.query.recalculate === 'true';
+      const forceIvUpdate = req.query.updateiv === 'true';
       
-      console.log(`🔍 /api/tickers DEBUG: userId=${userId}, marketDataApiService.isConfigured()=${marketDataApiService.isConfigured()}, tickers.length=${tickers.length}, shouldRecalculate=${shouldRecalculate}`);
+      console.log(`🔍 /api/tickers DEBUG: userId=${userId}, marketDataApiService.isConfigured()=${marketDataApiService.isConfigured()}, tickers.length=${tickers.length}, shouldRecalculate=${shouldRecalculate}, forceIvUpdate=${forceIvUpdate}`);
+      
+      // Force IV update if requested
+      if (forceIvUpdate && marketDataApiService.isConfigured() && tickers.length > 0) {
+        console.log("🔄 FORCE UPDATING IV DATA FROM MARKETDATA.APP...");
+        
+        for (const ticker of tickers) {
+          if (!ticker.position) continue;
+          
+          try {
+            console.log(`🔄 Updating IV for ${ticker.symbol}...`);
+            
+            // Import the calculator
+            const { LongStrangleCalculator } = await import('../positionCalculator');
+            
+            // Get fresh market data with new IV extraction
+            const marketData = await LongStrangleCalculator.getOptimalStrikesFromChain(
+              ticker.symbol,
+              ticker.currentPrice,
+              storage,
+              ticker.position?.expirationDate
+            );
+            
+            if (marketData) {
+              console.log(`✅ NEW IV DATA for ${ticker.symbol}: ${marketData.impliedVolatility.toFixed(1)}% (${marketData.ivPercentile}th percentile)`);
+              
+              // Update position with new IV data
+              await storage.updatePosition(ticker.position.id, userId, {
+                impliedVolatility: marketData.impliedVolatility,
+                ivPercentile: marketData.ivPercentile,
+                longPutStrike: marketData.putStrike,
+                longCallStrike: marketData.callStrike,
+                longPutPremium: marketData.putPremium,
+                longCallPremium: marketData.callPremium,
+                maxLoss: Math.round((marketData.putPremium + marketData.callPremium) * 100),
+              });
+              
+              console.log(`✅ Updated ${ticker.symbol} IV from old value to ${marketData.impliedVolatility.toFixed(1)}%`);
+            }
+          } catch (error) {
+            console.error(`❌ Error updating IV for ${ticker.symbol}:`, error);
+          }
+        }
+        
+        // Refetch updated tickers
+        const updatedTickers = await storage.getActiveTickersWithPositionsForUser(userId);
+        res.json(updatedTickers);
+        return;
+      }
       
       if (marketDataApiService.isConfigured() && tickers.length > 0 && shouldRecalculate) {
         console.log("🔄 Periodically updating positions with real market data...");

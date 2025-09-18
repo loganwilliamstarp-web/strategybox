@@ -102,15 +102,61 @@ export function registerRefreshRoutes(app: Express): void {
           console.log(`   ${index + 1}. ${ticker.symbol} (ID: ${ticker.id}, UserID: ${ticker.userId})`);
         });
         
-        // SIMPLE APPROACH: Just clear cache and let automatic updates handle the rest
+        // COMPREHENSIVE APPROACH: Clear cache AND recalculate positions with real IV data
         const { marketDataApiService } = await import('../marketDataApi');
         console.log(`🧹 Clearing MarketData API cache for fresh data...`);
         marketDataApiService.clearCache();
-        console.log(`✅ Cache cleared - next automatic updates will use fresh data`);
+        console.log(`✅ Cache cleared - now recalculating positions with fresh MarketData.app IV data`);
         
-        // Return success - the automatic price updates will pick up fresh data
+        // Force recalculation of all positions with real IV data
+        for (const ticker of tickers) {
+          if (!ticker.position) continue;
+          
+          try {
+            console.log(`🔄 Recalculating ${ticker.symbol} with real MarketData.app IV data...`);
+            
+            // Import the calculator
+            const { LongStrangleCalculator } = await import('../positionCalculator');
+            
+            // Get fresh market data with IV extraction
+            const marketData = await LongStrangleCalculator.getOptimalStrikesFromChain(
+              ticker.symbol,
+              ticker.currentPrice,
+              storage,
+              ticker.position?.expirationDate
+            );
+            
+            if (marketData) {
+              console.log(`✅ NEW IV DATA for ${ticker.symbol}: ${marketData.impliedVolatility.toFixed(1)}% (${marketData.ivPercentile}th percentile)`);
+              
+              // Update position with new IV data and corrected days to expiry
+              const today = new Date();
+              const expiry = new Date(ticker.position.expirationDate);
+              const diffTime = expiry.getTime() - today.getTime();
+              const correctDaysToExpiry = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+              
+              await storage.updatePosition(ticker.position.id, userId, {
+                impliedVolatility: marketData.impliedVolatility,
+                ivPercentile: marketData.ivPercentile,
+                daysToExpiry: correctDaysToExpiry,
+                atmValue: ticker.currentPrice, // Update ATM value with current stock price
+                longPutStrike: marketData.putStrike,
+                longCallStrike: marketData.callStrike,
+                longPutPremium: marketData.putPremium,
+                longCallPremium: marketData.callPremium,
+                maxLoss: Math.round((marketData.putPremium + marketData.callPremium) * 100),
+              });
+              
+              console.log(`✅ Updated ${ticker.symbol}: IV=${marketData.impliedVolatility.toFixed(1)}%, Days=${correctDaysToExpiry}d, ATM=${ticker.currentPrice}`);
+            }
+          } catch (error) {
+            console.error(`❌ Error recalculating ${ticker.symbol}:`, error);
+          }
+        }
+        
+        // Return success with actual recalculation
         const refreshResults = { pricesUpdated: tickers.length, optionsUpdated: tickers.length };
-        console.log(`🎉 SIMPLE REFRESH SUCCESS: Cleared cache for ${tickers.length} tickers`);
+        console.log(`🎉 COMPREHENSIVE REFRESH SUCCESS: Recalculated ${tickers.length} positions with real IV data`);
         
         const responseTime = Date.now() - startTime;
         const response = {

@@ -322,7 +322,8 @@ export function registerLegacyRoutes(app: Express): void {
     }
   });
 
-  // Refresh earnings data, prices, and options pricing
+  // DISABLED: Refresh earnings data, prices, and options pricing (moved to refresh.ts)
+  /*
   app.post("/api/tickers/refresh-earnings", requireAuth, rateLimitRules.marketData, async (req: any, res) => {
     try {
       const userId = req.user.id;
@@ -450,6 +451,7 @@ export function registerLegacyRoutes(app: Express): void {
       });
     }
   });
+  */
 
   // DEBUG ENDPOINTS (NO AUTH for debugging)
   app.get("/api/debug/aapl-options", rateLimitRules.marketData, async (req: any, res) => {

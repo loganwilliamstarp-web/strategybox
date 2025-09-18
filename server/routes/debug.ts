@@ -42,6 +42,173 @@ export function setupDebugRoutes(app: Express) {
     }
   });
 
+  // Force recalculation of all positions with new IV data from MarketData.app
+  app.post("/api/debug/recalculate-iv-data", async (req: any, res) => {
+    try {
+      console.log('🔄 RECALCULATING ALL POSITIONS WITH NEW IV DATA...');
+      
+      const userId = '5630d6b1-42b4-43bd-8669-d554281a5e1b';
+      const tickers = await storage.getActiveTickersWithPositionsForUser(userId);
+      console.log(`📊 Found ${tickers.length} positions to recalculate with new IV data`);
+      
+      const results = [];
+      
+      for (const ticker of tickers) {
+        if (!ticker.position) {
+          continue;
+        }
+        
+        console.log(`🔄 Recalculating ${ticker.symbol} position with new IV data from MarketData.app...`);
+        
+        try {
+          // Import the calculator
+          const { LongStrangleCalculator } = await import('../positionCalculator');
+          
+          // Get fresh market data with new IV extraction
+          const marketData = await LongStrangleCalculator.getOptimalStrikesFromChain(
+            ticker.symbol,
+            ticker.currentPrice,
+            storage,
+            ticker.position?.expirationDate
+          );
+          
+          if (!marketData) {
+            console.log(`❌ No market data available for ${ticker.symbol}`);
+            continue;
+          }
+          
+          console.log(`✅ NEW IV DATA for ${ticker.symbol}: ${marketData.impliedVolatility.toFixed(1)}% (${marketData.ivPercentile}th percentile)`);
+          
+          // Update position with new IV data and expected move (keep existing strikes/premiums but update IV)
+          const updatedPosition = await storage.updatePosition(ticker.position.id, userId, {
+            impliedVolatility: marketData.impliedVolatility,
+            ivPercentile: marketData.ivPercentile,
+            // Optionally update strikes/premiums too
+            longPutStrike: marketData.putStrike,
+            longCallStrike: marketData.callStrike,
+            longPutPremium: marketData.putPremium,
+            longCallPremium: marketData.callPremium,
+            maxLoss: Math.round((marketData.putPremium + marketData.callPremium) * 100),
+          });
+          
+          results.push({
+            symbol: ticker.symbol,
+            success: true,
+            oldIV: ticker.position.impliedVolatility,
+            newIV: marketData.impliedVolatility,
+            oldIVPercentile: ticker.position.ivPercentile,
+            newIVPercentile: marketData.ivPercentile,
+            message: `Updated IV from ${ticker.position.impliedVolatility}% to ${marketData.impliedVolatility.toFixed(1)}%`
+          });
+          
+        } catch (error) {
+          console.error(`❌ Error recalculating ${ticker.symbol}:`, error);
+          results.push({
+            symbol: ticker.symbol,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+      
+      console.log('✅ IV RECALCULATION COMPLETE');
+      res.json({
+        message: "IV recalculation completed",
+        results,
+        totalProcessed: results.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      });
+      
+    } catch (error) {
+      console.error('❌ IV RECALCULATION ERROR:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        message: "Failed to recalculate IV data"
+      });
+    }
+  });
+
+  // Simple IV update endpoint that works without query params (no auth required)
+  app.post("/api/debug/force-iv-update", async (req: any, res) => {
+    try {
+      console.log('🔄 FORCE IV UPDATE TRIGGERED!');
+      
+      const userId = '5630d6b1-42b4-43bd-8669-d554281a5e1b';
+      const tickers = await storage.getActiveTickersWithPositionsForUser(userId);
+      console.log(`📊 Found ${tickers.length} positions to update with real IV data`);
+      
+      const results = [];
+      
+      for (const ticker of tickers) {
+        if (!ticker.position) continue;
+        
+        try {
+          console.log(`🔄 Updating IV for ${ticker.symbol}...`);
+          
+          // Import the calculator
+          const { LongStrangleCalculator } = await import('../positionCalculator');
+          
+          // Get fresh market data with new IV extraction
+          const marketData = await LongStrangleCalculator.getOptimalStrikesFromChain(
+            ticker.symbol,
+            ticker.currentPrice,
+            storage,
+            ticker.position?.expirationDate
+          );
+          
+          if (marketData) {
+            console.log(`✅ NEW IV DATA for ${ticker.symbol}: ${marketData.impliedVolatility.toFixed(1)}% (${marketData.ivPercentile}th percentile)`);
+            
+            // Update position with new IV data
+            await storage.updatePosition(ticker.position.id, userId, {
+              impliedVolatility: marketData.impliedVolatility,
+              ivPercentile: marketData.ivPercentile,
+              longPutStrike: marketData.putStrike,
+              longCallStrike: marketData.callStrike,
+              longPutPremium: marketData.putPremium,
+              longCallPremium: marketData.callPremium,
+              maxLoss: Math.round((marketData.putPremium + marketData.callPremium) * 100),
+            });
+            
+            results.push({
+              symbol: ticker.symbol,
+              success: true,
+              oldIV: ticker.position.impliedVolatility,
+              newIV: marketData.impliedVolatility,
+              oldIVPercentile: ticker.position.ivPercentile,
+              newIVPercentile: marketData.ivPercentile,
+              message: `Updated IV from ${ticker.position.impliedVolatility}% to ${marketData.impliedVolatility.toFixed(1)}%`
+            });
+          }
+        } catch (error) {
+          console.error(`❌ Error updating IV for ${ticker.symbol}:`, error);
+          results.push({
+            symbol: ticker.symbol,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+      
+      console.log('✅ FORCE IV UPDATE COMPLETE');
+      res.json({
+        message: "Force IV update completed",
+        results,
+        totalProcessed: results.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      });
+      
+    } catch (error) {
+      console.error('❌ FORCE IV UPDATE ERROR:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        message: "Failed to force IV update"
+      });
+    }
+  });
+
        // Update positions with closest real strikes from options chain
        app.post("/api/debug/update-strikes-from-live-data", async (req: any, res) => {
          try {
