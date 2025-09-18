@@ -756,7 +756,7 @@ export default function Dashboard() {
         <div className="mb-8">
           {tickersLoading ? (
             // Loading skeleton
-            <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6' : 'space-y-4'}>
+            <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6' : 'space-y-4'}>
               {Array.from({ length: 4 }).map((_, i) => (
                 <Card key={i} className="p-4 md:p-6 animate-pulse">
                   <div className="space-y-4">
@@ -777,7 +777,7 @@ export default function Dashboard() {
               </p>
             </div>
           ) : viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               {tickers.map((ticker) => (
                 <TickerCard 
                   key={ticker.id} 
