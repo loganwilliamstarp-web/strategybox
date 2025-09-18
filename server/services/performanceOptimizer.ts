@@ -43,8 +43,8 @@ export class PerformanceOptimizer {
   private updateIntervals = new Map<string, NodeJS.Timeout>();
   
   // Configuration
-  private readonly PRICE_CACHE_DURATION = 30 * 1000; // 30 seconds for more live data
-  private readonly OPTIONS_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for more live options
+  private readonly PRICE_CACHE_DURATION = 30 * 1000; // 30 seconds for live data
+  private readonly OPTIONS_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for options (less frequent changes)
   private readonly BATCH_INTERVAL = 5 * 1000; // 5 seconds
   private readonly MAX_BATCH_SIZE = 10;
   private readonly INACTIVE_THRESHOLD = 5 * 60 * 1000; // 5 minutes
@@ -116,9 +116,9 @@ export class PerformanceOptimizer {
     const cacheKey = `${symbol}:${expirationDate || 'all'}`;
     const cached = this.optionsCache.get(cacheKey);
     
-    // Check cache first - use longer cache for options (15 minutes)
+    // Check cache first - use 30 minute cache for options (less frequent changes)
     if (cached && Date.now() - cached.timestamp < this.OPTIONS_CACHE_DURATION) {
-      console.log(`📋 Using cached options data for ${symbol} (${Math.floor((Date.now() - cached.timestamp) / 1000)}s old)`);
+      console.log(`📋 Using cached options data for ${symbol} (${Math.floor((Date.now() - cached.timestamp) / 60000)}min old)`);
       return cached.data;
     }
 

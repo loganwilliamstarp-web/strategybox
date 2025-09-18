@@ -801,6 +801,7 @@ export class DatabaseStorage implements IStorage {
               strike: call.strike,
               bid: call.bid,
               ask: call.ask,
+              lastPrice: call.last || 0, // Fix: API uses 'last', DB expects 'lastPrice'
               volume: call.volume || 0,
               openInterest: call.openInterest || 0,
               impliedVolatility: call.impliedVolatility || 0,
@@ -820,6 +821,7 @@ export class DatabaseStorage implements IStorage {
               strike: put.strike,
               bid: put.bid,
               ask: put.ask,
+              lastPrice: put.last || 0, // Fix: API uses 'last', DB expects 'lastPrice'
               volume: put.volume || 0,
               openInterest: put.openInterest || 0,
               impliedVolatility: put.impliedVolatility || 0,

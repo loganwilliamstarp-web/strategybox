@@ -7,8 +7,10 @@ import { StrikeSelector } from "@/components/strike-selector";
 import { X, BarChart3, CalendarDays, TrendingUp, Target, Settings, Activity } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useCapacitor } from "@/hooks/useCapacitor";
 import { apiRequest } from "@/lib/queryClient";
 import { useState, useEffect, useRef, useMemo, memo } from "react";
+import { ImpactStyle } from "@capacitor/haptics";
 import type { TickerWithPosition } from "@shared/schema";
 
 const getStrategyDisplayName = (strategyType: string | undefined) => {
@@ -42,6 +44,7 @@ interface TickerCardProps {
 const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolatilitySurface }: TickerCardProps) {
   const { position } = ticker;
   const isPositiveChange = ticker.priceChange >= 0;
+  const { isNative, triggerHaptics } = useCapacitor();
   
   // Debug strategy type issues
   console.log(`🎯 TickerCard Debug for ${ticker.symbol}:`, {
@@ -238,7 +241,7 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
   }, [freshOptionsData, position, ticker.symbol]);
 
   return (
-    <Card className="p-6" data-testid={`card-ticker-${ticker.symbol}`}>
+    <Card className="p-4 sm:p-6 transition-all duration-200 hover:shadow-lg" data-testid={`card-ticker-${ticker.symbol}`}>
       {/* Header Section */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
@@ -271,7 +274,10 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
           <Button
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 text-xs rounded font-medium flex items-center space-x-1"
-            onClick={() => onViewOptions?.(ticker.symbol)}
+            onClick={async () => {
+              if (isNative) await triggerHaptics(ImpactStyle.Light);
+              onViewOptions?.(ticker.symbol);
+            }}
             data-testid={`button-chain-${ticker.symbol}`}
           >
             <BarChart3 className="h-3 w-3" />
@@ -290,7 +296,10 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => removeMutation.mutate()}
+            onClick={async () => {
+              if (isNative) await triggerHaptics(ImpactStyle.Medium);
+              removeMutation.mutate();
+            }}
             disabled={removeMutation.isPending}
             className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
             data-testid={`button-remove-${ticker.symbol}`}

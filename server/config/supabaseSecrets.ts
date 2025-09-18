@@ -100,30 +100,40 @@ export class SupabaseSecrets {
         return cached.value;
       }
 
-      // DIRECT HARDCODED APPROACH using your actual Vault keys
+      // Try to get secret from Supabase Vault using RPC
       let data, error;
       
-      console.log(`🔍 Using DIRECT VAULT KEYS for ${secretName}...`);
+      console.log(`🔍 Getting ${secretName} from Supabase Vault...`);
       
-      // Your actual keys from the Vault (these are the real ones!)
-      const realVaultKeys: Record<string, string> = {
-        'MARKETDATA_API_KEY': 'cEtFbzdjN2FlQTFLaDUtTzNqT2NGaFlfa0ZkNXZjblN2aUI3eDZyNWpRMD0',
-        'FINNHUB_API_KEY': 'd29avnpr01qhoenb1begd29avnpr01qhoenb1bf0'
-      };
-      
-      if (realVaultKeys[secretName]) {
-        // These are the ACTUAL API keys directly from MarketData.app and Finnhub
-        // NO DECODING NEEDED - use exactly as provided
-        const actualApiKey = realVaultKeys[secretName];
-        
-        console.log(`🔍 Using ACTUAL API KEY for ${secretName} (direct from provider)...`);
-        console.log(`🔑 Actual key: ${actualApiKey.substring(0, 8)}...${actualApiKey.substring(actualApiKey.length - 4)} (${actualApiKey.length} chars)`);
-        
-        data = { decrypted_secret: actualApiKey };
-        error = null;
-        console.log(`✅ USING REAL API KEY for ${secretName}: ${actualApiKey.substring(0, 8)}...${actualApiKey.substring(actualApiKey.length - 4)} (${actualApiKey.length} chars)`);
-      } else {
-        // Fallback to environment variable
+      try {
+        // Use Supabase RPC to access vault secrets (bypasses table access restrictions)
+        const { data: vaultData, error: vaultError } = await supabase.rpc('get_vault_secret', {
+          secret_name: secretName
+        });
+
+        if (vaultError) {
+          console.log(`⚠️ Vault RPC error for ${secretName}:`, vaultError.message);
+          data = null;
+          error = vaultError;
+        } else if (vaultData) {
+          // RPC function returns the secret value directly
+          data = { decrypted_secret: vaultData };
+          error = null;
+          const keyPreview = vaultData.substring(0, 8) + '...' + vaultData.substring(vaultData.length - 4);
+          console.log(`✅ Retrieved ${secretName} from Supabase Vault RPC: ${keyPreview} (${vaultData.length} chars)`);
+        } else {
+          console.log(`⚠️ No secret found in Vault for ${secretName}`);
+          data = null;
+          error = new Error(`Secret ${secretName} not found in Vault`);
+        }
+      } catch (vaultError) {
+        console.log(`❌ Failed to read from Supabase Vault for ${secretName}:`, vaultError);
+        data = null;
+        error = vaultError;
+      }
+
+      // Fallback to environment variable if Vault fails
+      if (!data || error) {
         console.log(`🔄 Fallback: Environment variable for ${secretName}`);
         const envValue = process.env[secretName];
         if (envValue && envValue.length > 15) {

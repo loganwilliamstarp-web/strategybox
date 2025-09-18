@@ -127,20 +127,39 @@ export function PerformanceStoryTeller({ tickers, summary, className }: Performa
     const avgIV = summary.avgImpliedVolatility;
     const positions = tickers.length;
     
-    // Calculate distance from breakevens
+    // Calculate P&L and breakeven analysis for each ticker
     const breakevenAnalysis = tickers.map(ticker => {
       const { currentPrice, position } = ticker;
       const lowerDistance = ((currentPrice - position.lowerBreakeven) / currentPrice) * 100;
       const upperDistance = ((position.upperBreakeven - currentPrice) / currentPrice) * 100;
       const inProfitZone = currentPrice < position.lowerBreakeven || currentPrice > position.upperBreakeven;
       
+      // Calculate current P&L for this position
+      const premiumPaid = position.longPutPremium + position.longCallPremium;
+      let currentPnL = 0;
+      
+      if (position.strategyType === 'long_strangle') {
+        // Long strangle P&L calculation
+        const putValue = Math.max(0, position.longPutStrike - currentPrice);
+        const callValue = Math.max(0, currentPrice - position.longCallStrike);
+        const totalValue = putValue + callValue;
+        currentPnL = (totalValue - premiumPaid) * 100; // Convert to dollars
+      }
+      
+      const pnlPercent = premiumPaid > 0 ? (currentPnL / (premiumPaid * 100)) * 100 : 0;
+      
       return {
         symbol: ticker.symbol,
+        currentPrice,
         lowerDistance,
         upperDistance,
         inProfitZone,
         daysToExpiry: position.daysToExpiry,
         maxLoss: position.maxLoss,
+        premiumPaid: premiumPaid * 100, // Convert to dollars
+        currentPnL,
+        pnlPercent,
+        isProfit: currentPnL > 0,
       };
     });
     
@@ -294,7 +313,24 @@ export function PerformanceStoryTeller({ tickers, summary, className }: Performa
       ],
     });
     
-    // Chapter 4: Time Decay Analysis
+    // Chapter 4: Individual Position P&L Analysis
+    const totalPnL = metrics.breakevenAnalysis.reduce((sum: number, pos: any) => sum + pos.currentPnL, 0);
+    const profitableCount = metrics.breakevenAnalysis.filter((pos: any) => pos.isProfit).length;
+    
+    chapters.push({
+      id: 'pnl',
+      title: 'Position P&L Breakdown',
+      content: `Current portfolio P&L stands at ${totalPnL >= 0 ? '+' : ''}$${totalPnL.toFixed(2)} across all positions. ${profitableCount} of ${metrics.positions} positions are currently profitable. ${metrics.breakevenAnalysis.map((pos: any) => `${pos.symbol}: ${pos.currentPnL >= 0 ? '+' : ''}$${pos.currentPnL.toFixed(2)} (${pos.pnlPercent >= 0 ? '+' : ''}${pos.pnlPercent.toFixed(1)}%)`).join(', ')}.`,
+      sentiment: totalPnL >= 0 ? 'positive' : 'negative',
+      icon: <DollarSign className="w-5 h-5" />,
+      metrics: metrics.breakevenAnalysis.map((pos: any) => ({
+        key: pos.symbol,
+        value: `${pos.currentPnL >= 0 ? '+' : ''}$${pos.currentPnL.toFixed(2)}`,
+        trend: pos.isProfit ? 'up' : 'down'
+      })),
+    });
+
+    // Chapter 5: Time Decay Analysis
     if (metrics.nearExpiry > 0) {
       chapters.push({
         id: 'time',

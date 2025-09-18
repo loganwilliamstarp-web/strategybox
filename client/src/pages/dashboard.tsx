@@ -156,16 +156,22 @@ export default function Dashboard() {
       const today = new Date();
       const currentDay = today.getDay(); // 0=Sunday, 5=Friday
       
-      // Calculate days until next Friday (same logic as backend)
+      // Calculate days until next valid Friday (never use today)
       let daysUntilFriday;
       if (currentDay < 5) {
+        // Monday-Thursday: Use this Friday
         daysUntilFriday = 5 - currentDay;
       } else if (currentDay === 5) {
-        // If it's Friday after 4 PM ET, use next Friday
-        daysUntilFriday = today.getHours() >= 16 ? 7 : 0;
+        // Friday: Always use next Friday (options expire at close)
+        daysUntilFriday = 7;
       } else {
-        // Saturday (6) to Friday = 6 days
-        daysUntilFriday = 6;
+        // Saturday-Sunday: Use next Friday
+        daysUntilFriday = 7 - currentDay + 5;
+      }
+      
+      // Ensure we never use today (minimum 1 day)
+      if (daysUntilFriday === 0) {
+        daysUntilFriday = 7;
       }
       
       const nextFriday = new Date(today);
@@ -342,12 +348,12 @@ export default function Dashboard() {
   
   const { data: allTickers = [], isLoading: tickersLoading, refetch } = useQuery<TickerWithPosition[]>({
     queryKey: ["/api/tickers"], // Keep stable query key
-    refetchInterval: 3 * 1000, // Refresh every 3 seconds for real-time updates
-    staleTime: 0, // Always consider stale to ensure fresh data
-    cacheTime: 0, // Don't cache at all
+    refetchInterval: isRealtimeConnected ? false : 60 * 1000, // Only poll if WebSocket disconnected (1 min fallback)
+    staleTime: 30 * 1000, // Cache for 30 seconds when WebSocket is active
+    cacheTime: 60 * 1000, // Cache for 1 minute
     refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchOnMount: true, // Always refetch on mount
-    refetchIntervalInBackground: true, // Continue refreshing in background
+    refetchIntervalInBackground: false, // Let WebSocket handle background updates
     onSuccess: (data) => {
       console.log('🔄 Query SUCCESS - Received ticker data:', data?.length, 'tickers');
       console.log('📊 First ticker data:', data?.[0]);
@@ -357,14 +363,16 @@ export default function Dashboard() {
     },
   });
 
-  // Force refetch every 10 seconds as backup
+  // Only force refetch if WebSocket is disconnected
   useEffect(() => {
-    const interval = setInterval(() => {
-      console.log('🔄 FORCE REFETCH - Manual trigger');
-      refetch();
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [refetch]);
+    if (!isRealtimeConnected) {
+      const interval = setInterval(() => {
+        console.log('🔄 FORCE REFETCH - WebSocket disconnected, using polling fallback');
+        refetch();
+      }, 60000); // 1 minute fallback when WebSocket is down
+      return () => clearInterval(interval);
+    }
+  }, [refetch, isRealtimeConnected]);
 
   // Filter tickers based on selected expiration date
   const tickers = selectedDate 
@@ -441,8 +449,8 @@ export default function Dashboard() {
 
       {/* Header */}
       <header className={`bg-card shadow-sm border-b border-border ${isNative ? 'mt-16' : ''}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-14 sm:h-16">
             <div className="flex items-center">
               <div className="text-xl font-semibold text-foreground" data-testid="page-title">
                 <BarChart2 className="h-6 w-6" />
@@ -450,17 +458,19 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center space-x-4">
               {/* Real-time Status Indicators */}
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2">
                 {/* WebSocket Connection Status */}
                 {isRealtimeConnected ? (
-                  <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">
+                  <Badge variant="default" className="bg-blue-500 hover:bg-blue-600 text-xs sm:text-sm">
                     <Wifi className="w-3 h-3 mr-1" />
-                    Real-time
+                    <span className="hidden sm:inline">Real-time</span>
+                    <span className="sm:hidden">Live</span>
                   </Badge>
                 ) : (
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="text-xs sm:text-sm">
                     <WifiOff className="w-3 h-3 mr-1" />
-                    Connecting...
+                    <span className="hidden sm:inline">Connecting...</span>
+                    <span className="sm:hidden">...</span>
                   </Badge>
                 )}
                 
@@ -695,20 +705,16 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
-            <div className="flex items-center justify-between flex-wrap gap-6">
-              {/* Strategy Selector */}
-              <div className="flex items-center">
-                <div className="w-48">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
+              {/* Strategy and Expiration Selectors */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+                <div className="w-full sm:w-48">
                   <StrategySelector 
                     value={selectedStrategy}
                     onValueChange={handleStrategyChange}
                   />
                 </div>
-              </div>
-              
-              {/* Expiration Selector */}
-              <div className="flex items-center">
-                <div className="w-56">
+                <div className="w-full sm:w-56">
                   <ExpirationSelector 
                     value={selectedExpiration}
                     onValueChange={handleExpirationChange}
@@ -717,7 +723,7 @@ export default function Dashboard() {
               </div>
               
               {/* View Toggle */}
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
                 <label className="text-sm font-medium text-muted-foreground">View:</label>
                 <div className="flex border rounded-lg p-1 bg-muted/30">
                   <Button
@@ -750,9 +756,9 @@ export default function Dashboard() {
         <div className="mb-8">
           {tickersLoading ? (
             // Loading skeleton
-            <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 gap-6' : 'space-y-4'}>
+            <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6' : 'space-y-4'}>
               {Array.from({ length: 4 }).map((_, i) => (
-                <Card key={i} className="p-6 animate-pulse">
+                <Card key={i} className="p-4 md:p-6 animate-pulse">
                   <div className="space-y-4">
                     <div className="h-6 bg-muted rounded w-1/3"></div>
                     <div className="h-4 bg-muted rounded w-1/2"></div>
@@ -771,7 +777,7 @@ export default function Dashboard() {
               </p>
             </div>
           ) : viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
               {tickers.map((ticker) => (
                 <TickerCard 
                   key={ticker.id} 
@@ -881,7 +887,7 @@ export default function Dashboard() {
                 </Badge>
               )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
               <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                 <div className="text-sm text-muted-foreground">Total Premium Paid</div>
                 <div className="text-xl font-bold text-red-600" data-testid="text-total-premium">
