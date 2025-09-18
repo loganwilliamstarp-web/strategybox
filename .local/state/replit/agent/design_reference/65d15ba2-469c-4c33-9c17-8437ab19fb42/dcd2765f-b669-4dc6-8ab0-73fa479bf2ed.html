@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Short Strangle Analytics Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1976D2',
+                        secondary: '#424242',
+                        profit: '#4CAF50',
+                        loss: '#F44336',
+                        warning: '#FF9800',
+                        surface: '#FFFFFF',
+                        background: '#FAFAFA'
+                    },
+                    fontFamily: {
+                        'roboto': ['Roboto', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-background font-roboto text-gray-800">
+    <!-- @COMPONENT: Header -->
+    <header class="bg-surface shadow-md border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-chart-line text-primary text-2xl"></i>
+                        <h1 class="text-xl font-bold text-gray-900">Strangle Analytics</h1>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <input type="text" placeholder="Search symbols..." 
+                               class="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                               data-mock="true" data-bind="searchQuery">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    <button class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- @COMPONENT: Sidebar Filters -->
+            <div class="lg:col-span-1">
+                <div class="bg-surface rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Filters & Settings</h3>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Underlying Asset</label>
+                            <select class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent" data-mock="true">
+                                <option>SPY - SPDR S&P 500 ETF</option>
+                                <option>QQQ - Invesco QQQ Trust</option>
+                                <option>AAPL - Apple Inc.</option>
+                                <option>MSFT - Microsoft Corp.</option>
+                                <option>TSLA - Tesla Inc.</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Expiration Date</label>
+                            <select class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent" data-mock="true">
+                                <option>12/15/2024 (7 DTE)</option>
+                                <option>12/20/2024 (12 DTE)</option>
+                                <option>01/17/2025 (40 DTE)</option>
+                                <option>02/21/2025 (75 DTE)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Strike Range</label>
+                            <div class="flex space-x-2">
+                                <input type="number" placeholder="Call Strike" 
+                                       class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent" 
+                                       value="585" data-mock="true">
+                                <input type="number" placeholder="Put Strike" 
+                                       class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent" 
+                                       value="565" data-mock="true">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Position Size</label>
+                            <input type="number" placeholder="Contracts" 
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent" 
+                                   value="5" data-mock="true">
+                        </div>
+
+                        <button class="w-full bg-primary hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+                            <i class="fas fa-calculator mr-2"></i>Calculate Position
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Risk Metrics Card -->
+                <div class="bg-surface rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Risk Metrics</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Max Profit</span>
+                            <span class="font-semibold text-profit" data-bind="maxProfit">$1,250</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Max Loss</span>
+                            <span class="font-semibold text-loss" data-bind="maxLoss">Unlimited</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Probability of Profit</span>
+                            <span class="font-semibold text-gray-900" data-bind="profitProbability">68.2%</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Break-even Range</span>
+                            <span class="font-semibold text-gray-900" data-bind="breakEvenRange">$562.50 - $587.50</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Days to Expiration</span>
+                            <span class="font-semibold text-warning" data-bind="daysToExpiration">7</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: Sidebar Filters -->
+
+            <!-- @COMPONENT: Main Content Area -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- Current Position Overview -->
+                <div class="bg-surface rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold text-gray-900">Current Position: SPY Short Strangle</h2>
+                        <div class="flex items-center space-x-4">
+                            <span class="text-sm text-gray-500">Last Updated: 2 minutes ago</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-profit rounded-full animate-pulse"></div>
+                                <span class="text-sm font-medium text-profit">Live</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Key Metrics Dashboard -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-gray-50 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-profit" data-bind="currentPnL">+$425</div>
+                            <div class="text-sm text-gray-600">Current P&L</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-gray-900" data-bind="currentPrice">$575.82</div>
+                            <div class="text-sm text-gray-600">SPY Price</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-warning" data-bind="theta">-$12.50</div>
+                            <div class="text-sm text-gray-600">Daily Theta</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4 text-center">
+                            <div class="text-2xl font-bold text-primary" data-bind="delta">0.05</div>
+                            <div class="text-sm text-gray-600">Net Delta</div>
+                        </div>
+                    </div>
+
+                    <!-- P&L Chart -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Profit & Loss Curve</h3>
+                        <div class="bg-gray-50 rounded-lg p-4" style="height: 400px;">
+                            <canvas id="pnlChart" class="w-full h-full"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time Decay Analysis -->
+                <div class="bg-surface rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Time Decay Analysis</h3>
+                    <div class="bg-gray-50 rounded-lg p-4" style="height: 300px;">
+                        <canvas id="timeDecayChart" class="w-full h-full"></canvas>
+                    </div>
+                </div>
+
+                <!-- Position Details Table -->
+                <div class="bg-surface rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Position Details</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-left py-3 px-2 font-medium text-gray-700">Option</th>
+                                    <th class="text-left py-3 px-2 font-medium text-gray-700">Strike</th>
+                                    <th class="text-left py-3 px-2 font-medium text-gray-700">Exp Date</th>
+                                    <th class="text-left py-3 px-2 font-medium text-gray-700">Qty</th>
+                                    <th class="text-left py-3 px-2 font-medium text-gray-700">Entry Price</th>
+                                    <th class="text-left py-3 px-2 font-medium text-gray-700">Current Price</th>
+                                    <th class="text-left py-3 px-2 font-medium text-gray-700">P&L</th>
+                                    <th class="text-left py-3 px-2 font-medium text-gray-700">Greeks</th>
+                                </tr>
+                            </thead>
+                            <tbody data-mock="true">
+                                <!-- @MAP: positions.map(position => ( -->
+                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="py-3 px-2">
+                                        <div class="flex items-center">
+                                            <span class="inline-block w-2 h-2 bg-profit rounded-full mr-2"></span>
+                                            SPY Call
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-2 font-mono">$585.00</td>
+                                    <td class="py-3 px-2">12/15/24</td>
+                                    <td class="py-3 px-2 text-loss">-5</td>
+                                    <td class="py-3 px-2 font-mono">$1.25</td>
+                                    <td class="py-3 px-2 font-mono">$0.85</td>
+                                    <td class="py-3 px-2 font-semibold text-profit">+$200</td>
+                                    <td class="py-3 px-2 text-sm">
+                                        <div>Δ: -0.15</div>
+                                        <div>Θ: -0.08</div>
+                                    </td>
+                                </tr>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                    <td class="py-3 px-2">
+                                        <div class="flex items-center">
+                                            <span class="inline-block w-2 h-2 bg-loss rounded-full mr-2"></span>
+                                            SPY Put
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-2 font-mono">$565.00</td>
+                                    <td class="py-3 px-2">12/15/24</td>
+                                    <td class="py-3 px-2 text-loss">-5</td>
+                                    <td class="py-3 px-2 font-mono">$1.25</td>
+                                    <td class="py-3 px-2 font-mono">$0.80</td>
+                                    <td class="py-3 px-2 font-semibold text-profit">+$225</td>
+                                    <td class="py-3 px-2 text-sm">
+                                        <div>Δ: 0.20</div>
+                                        <div>Θ: -0.07</div>
+                                    </td>
+                                </tr>
+                                <!-- @END_MAP )) -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Market Data & News -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-surface rounded-lg shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Market Conditions</h3>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Implied Volatility</span>
+                                <span class="font-semibold">18.5% (+2.1%)</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">VIX</span>
+                                <span class="font-semibold text-warning">16.42</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Volume</span>
+                                <span class="font-semibold">2.3M contracts</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Open Interest</span>
+                                <span class="font-semibold">1.8M contracts</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-surface rounded-lg shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Alerts & Notifications</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center space-x-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                <i class="fas fa-exclamation-triangle text-warning"></i>
+                                <div class="flex-1">
+                                    <div class="text-sm font-medium">Approaching Expiration</div>
+                                    <div class="text-xs text-gray-600">7 days until expiration</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <i class="fas fa-check-circle text-profit"></i>
+                                <div class="flex-1">
+                                    <div class="text-sm font-medium">Target Profit Achieved</div>
+                                    <div class="text-xs text-gray-600">25% of max profit reached</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_COMPONENT: Main Content Area -->
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // TODO: Implement real-time data fetching and WebSocket connections
+            
+            // P&L Chart Configuration
+            const pnlCtx = document.getElementById('pnlChart').getContext('2d');
+            const pnlChart = new Chart(pnlCtx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 101}, (_, i) => 520 + i * 1.2), // Stock prices from $520 to $640
+                    datasets: [{
+                        label: 'At Expiration',
+                        data: generatePnLData(520, 640, 565, 585, 2.50), // Put strike, Call strike, premium collected
+                        borderColor: '#1976D2',
+                        backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                        borderWidth: 3,
+                        fill: true
+                    }, {
+                        label: 'Current (7 DTE)',
+                        data: generateCurrentPnLData(520, 640, 565, 585, 2.50, 7),
+                        borderColor: '#4CAF50',
+                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        borderWidth: 2,
+                        borderDash: [5, 5]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Short Strangle P&L Analysis'
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Stock Price ($)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Profit/Loss ($)'
+                            },
+                            grid: {
+                                color: function(context) {
+                                    if (context.tick.value === 0) {
+                                        return '#666666';
+                                    }
+                                    return '#e0e0e0';
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+
+            // Time Decay Chart
+            const timeDecayCtx = document.getElementById('timeDecayChart').getContext('2d');
+            const timeDecayChart = new Chart(timeDecayCtx, {
+                type: 'line',
+                data: {
+                    labels: ['30 DTE', '21 DTE', '14 DTE', '7 DTE', '3 DTE', '1 DTE', 'Expiration'],
+                    datasets: [{
+                        label: 'Position Value',
+                        data: [2500, 2200, 1800, 1250, 800, 400, 0],
+                        borderColor: '#FF9800',
+                        backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Time Decay Effect on Position Value'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Days to Expiration'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Position Value ($)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            function generatePnLData(minPrice, maxPrice, putStrike, callStrike, premium) {
+                const data = [];
+                const priceRange = maxPrice - minPrice;
+                const step = priceRange / 100;
+                
+                for (let i = 0; i <= 100; i++) {
+                    const price = minPrice + (i * step);
+                    let pnl = premium * 500; // Premium collected for 5 contracts
+                    
+                    // Short put loss
+                    if (price < putStrike) {
+                        pnl -= (putStrike - price) * 500;
+                    }
+                    
+                    // Short call loss
+                    if (price > callStrike) {
+                        pnl -= (price - callStrike) * 500;
+                    }
+                    
+                    data.push(pnl);
+                }
+                return data;
+            }
+
+            function generateCurrentPnLData(minPrice, maxPrice, putStrike, callStrike, premium, dte) {
+                // Simplified current P&L calculation with time value
+                const data = [];
+                const priceRange = maxPrice - minPrice;
+                const step = priceRange / 100;
+                const timeValue = dte / 30; // Simplified time value factor
+                
+                for (let i = 0; i <= 100; i++) {
+                    const price = minPrice + (i * step);
+                    let pnl = premium * 500;
+                    
+                    // Adjust for remaining time value
+                    const putTimeValue = Math.max(0, (putStrike - price) * timeValue * 0.1);
+                    const callTimeValue = Math.max(0, (price - callStrike) * timeValue * 0.1);
+                    
+                    if (price < putStrike) {
+                        pnl -= (putStrike - price) * 500 * 0.7; // Partial intrinsic value
+                        pnl -= putTimeValue * 500;
+                    }
+                    
+                    if (price > callStrike) {
+                        pnl -= (price - callStrike) * 500 * 0.7;
+                        pnl -= callTimeValue * 500;
+                    }
+                    
+                    data.push(pnl);
+                }
+                return data;
+            }
+
+            // TODO: Implement real-time price updates
+            // TODO: Add WebSocket connection for live data
+            // TODO: Implement position management functionality
+            // TODO: Add alert system for risk management
+            
+        })();
+    </script>
+</body>
+</html>

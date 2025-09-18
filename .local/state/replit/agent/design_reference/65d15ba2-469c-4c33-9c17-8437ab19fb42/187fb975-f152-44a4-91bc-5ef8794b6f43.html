@@ -1,0 +1,536 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Short Strangle Analytics Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#1E40AF',
+                        'success': '#059669',
+                        'danger': '#DC2626',
+                        'surface': '#FFFFFF',
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- @COMPONENT: Header [navigation and branding] -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-semibold text-gray-900">Short Strangle Analytics</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <!-- @FUNCTIONALITY: Search and filter tickers -->
+                        <input type="text" placeholder="Add ticker (e.g., AAPL)" class="w-64 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" data-mock="true">
+                        <button class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <button class="bg-primary text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors" data-event="click:refreshData">
+                        Refresh Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    <!-- @COMPONENT: MainDashboard [ticker grid and analytics] -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <!-- @COMPONENT: DashboardControls [filters and view options] -->
+        <div class="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm font-medium text-gray-700">Active Tickers:</span>
+                    <!-- @MAP: selectedTickers.map(ticker => ( -->
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary text-white" data-mock="true">
+                        AAPL
+                        <button class="ml-1.5 text-white hover:text-gray-200" data-event="click:removeTicker">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                            </svg>
+                        </button>
+                    </span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary text-white" data-mock="true">
+                        TSLA
+                        <button class="ml-1.5 text-white hover:text-gray-200" data-event="click:removeTicker">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                            </svg>
+                        </button>
+                    </span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary text-white" data-mock="true">
+                        SPY
+                        <button class="ml-1.5 text-white hover:text-gray-200" data-event="click:removeTicker">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                            </svg>
+                        </button>
+                    </span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary text-white" data-mock="true">
+                        QQQ
+                        <button class="ml-1.5 text-white hover:text-gray-200" data-event="click:removeTicker">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                            </svg>
+                        </button>
+                    </span>
+                    <!-- @END_MAP )) -->
+                </div>
+                <div class="flex items-center space-x-3">
+                    <label class="text-sm font-medium text-gray-700">Time Frame:</label>
+                    <select class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary" data-mock="true">
+                        <option>30 Days</option>
+                        <option>45 Days</option>
+                        <option>60 Days</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: DashboardControls -->
+
+        <!-- @COMPONENT: TickerGrid [responsive grid of ticker cards] -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- @MAP: activeTickers.map(ticker => ( -->
+            <!-- AAPL Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-mock="true">
+                <!-- @COMPONENT: TickerHeader [ticker symbol and current price] -->
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <h3 class="text-lg font-semibold text-gray-900" data-bind="ticker.symbol">AAPL</h3>
+                        <span class="text-sm text-gray-500" data-bind="ticker.companyName">Apple Inc.</span>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-semibold text-gray-900" data-bind="ticker.currentPrice">$175.43</div>
+                        <div class="text-sm text-success font-medium" data-bind="ticker.priceChange">+$2.15 (+1.24%)</div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: TickerHeader -->
+
+                <!-- @COMPONENT: StrategyMetrics [key metrics for short strangle] -->
+                <div class="grid grid-cols-3 gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Max Profit</div>
+                        <div class="text-sm font-semibold text-success" data-bind="strategy.maxProfit">$450</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Max Loss</div>
+                        <div class="text-sm font-semibold text-danger" data-bind="strategy.maxLoss">Unlimited</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Days to Exp</div>
+                        <div class="text-sm font-semibold text-gray-900" data-bind="strategy.daysToExpiry">23</div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: StrategyMetrics -->
+
+                <!-- @COMPONENT: BreakevenPoints [lower and upper breakeven] -->
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <div class="text-xs text-gray-600 uppercase tracking-wide">Lower Breakeven</div>
+                        <div class="text-sm font-semibold text-gray-900" data-bind="strategy.lowerBreakeven">$168.50</div>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <div class="text-xs text-gray-600 uppercase tracking-wide">Upper Breakeven</div>
+                        <div class="text-sm font-semibold text-gray-900" data-bind="strategy.upperBreakeven">$182.50</div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: BreakevenPoints -->
+
+                <!-- @COMPONENT: ProfitLossChart [interactive P&L curve] -->
+                <div class="mb-4">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Profit/Loss Curve</h4>
+                    <div class="relative h-48 bg-gray-50 rounded-lg border">
+                        <canvas id="chart-aapl" class="w-full h-full"></canvas>
+                        <!-- @FUNCTIONALITY: Interactive P&L chart showing profit/loss at different stock prices -->
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: ProfitLossChart -->
+
+                <!-- @COMPONENT: PositionDetails [strike prices and premiums] -->
+                <div class="space-y-2">
+                    <h4 class="text-sm font-medium text-gray-700">Position Details</h4>
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div class="bg-gray-50 p-2 rounded">
+                            <div class="text-gray-600">Short Put</div>
+                            <div class="font-medium" data-bind="position.shortPut.strike">$165 Strike</div>
+                            <div class="text-success" data-bind="position.shortPut.premium">+$2.25</div>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded">
+                            <div class="text-gray-600">Short Call</div>
+                            <div class="font-medium" data-bind="position.shortCall.strike">$185 Strike</div>
+                            <div class="text-success" data-bind="position.shortCall.premium">+$2.25</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: PositionDetails -->
+            </div>
+
+            <!-- TSLA Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-mock="true">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <h3 class="text-lg font-semibold text-gray-900">TSLA</h3>
+                        <span class="text-sm text-gray-500">Tesla, Inc.</span>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-semibold text-gray-900">$248.92</div>
+                        <div class="text-sm text-danger font-medium">-$5.43 (-2.14%)</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Max Profit</div>
+                        <div class="text-sm font-semibold text-success">$680</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Max Loss</div>
+                        <div class="text-sm font-semibold text-danger">Unlimited</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Days to Exp</div>
+                        <div class="text-sm font-semibold text-gray-900">18</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <div class="text-xs text-gray-600 uppercase tracking-wide">Lower Breakeven</div>
+                        <div class="text-sm font-semibold text-gray-900">$232.00</div>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <div class="text-xs text-gray-600 uppercase tracking-wide">Upper Breakeven</div>
+                        <div class="text-sm font-semibold text-gray-900">$268.00</div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Profit/Loss Curve</h4>
+                    <div class="relative h-48 bg-gray-50 rounded-lg border">
+                        <canvas id="chart-tsla" class="w-full h-full"></canvas>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="text-sm font-medium text-gray-700">Position Details</h4>
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div class="bg-gray-50 p-2 rounded">
+                            <div class="text-gray-600">Short Put</div>
+                            <div class="font-medium">$225 Strike</div>
+                            <div class="text-success">+$3.40</div>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded">
+                            <div class="text-gray-600">Short Call</div>
+                            <div class="font-medium">$275 Strike</div>
+                            <div class="text-success">+$3.40</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SPY Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-mock="true">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <h3 class="text-lg font-semibold text-gray-900">SPY</h3>
+                        <span class="text-sm text-gray-500">SPDR S&P 500 ETF</span>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-semibold text-gray-900">$442.18</div>
+                        <div class="text-sm text-success font-medium">+$1.32 (+0.30%)</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Max Profit</div>
+                        <div class="text-sm font-semibold text-success">$320</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Max Loss</div>
+                        <div class="text-sm font-semibold text-danger">Unlimited</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Days to Exp</div>
+                        <div class="text-sm font-semibold text-gray-900">31</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <div class="text-xs text-gray-600 uppercase tracking-wide">Lower Breakeven</div>
+                        <div class="text-sm font-semibold text-gray-900">$438.80</div>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <div class="text-xs text-gray-600 uppercase tracking-wide">Upper Breakeven</div>
+                        <div class="text-sm font-semibold text-gray-900">$446.20</div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Profit/Loss Curve</h4>
+                    <div class="relative h-48 bg-gray-50 rounded-lg border">
+                        <canvas id="chart-spy" class="w-full h-full"></canvas>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="text-sm font-medium text-gray-700">Position Details</h4>
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div class="bg-gray-50 p-2 rounded">
+                            <div class="text-gray-600">Short Put</div>
+                            <div class="font-medium">$435 Strike</div>
+                            <div class="text-success">+$1.60</div>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded">
+                            <div class="text-gray-600">Short Call</div>
+                            <div class="font-medium">$450 Strike</div>
+                            <div class="text-success">+$1.60</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QQQ Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6" data-mock="true">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-3">
+                        <h3 class="text-lg font-semibold text-gray-900">QQQ</h3>
+                        <span class="text-sm text-gray-500">Invesco QQQ Trust</span>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-semibold text-gray-900">$378.45</div>
+                        <div class="text-sm text-success font-medium">+$2.87 (+0.76%)</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Max Profit</div>
+                        <div class="text-sm font-semibold text-success">$540</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Max Loss</div>
+                        <div class="text-sm font-semibold text-danger">Unlimited</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Days to Exp</div>
+                        <div class="text-sm font-semibold text-gray-900">26</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <div class="text-xs text-gray-600 uppercase tracking-wide">Lower Breakeven</div>
+                        <div class="text-sm font-semibold text-gray-900">$371.60</div>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <div class="text-xs text-gray-600 uppercase tracking-wide">Upper Breakeven</div>
+                        <div class="text-sm font-semibold text-gray-900">$386.40</div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Profit/Loss Curve</h4>
+                    <div class="relative h-48 bg-gray-50 rounded-lg border">
+                        <canvas id="chart-qqq" class="w-full h-full"></canvas>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="text-sm font-medium text-gray-700">Position Details</h4>
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div class="bg-gray-50 p-2 rounded">
+                            <div class="text-gray-600">Short Put</div>
+                            <div class="font-medium">$365 Strike</div>
+                            <div class="text-success">+$2.70</div>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded">
+                            <div class="text-gray-600">Short Call</div>
+                            <div class="font-medium">$392 Strike</div>
+                            <div class="text-success">+$2.70</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_MAP )) -->
+        </div>
+        <!-- @END_COMPONENT: TickerGrid -->
+
+        <!-- @COMPONENT: SummaryPanel [portfolio overview] -->
+        <div class="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Portfolio Summary</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <div class="text-sm text-gray-600">Total Premium Collected</div>
+                    <div class="text-xl font-bold text-success" data-bind="portfolio.totalPremium">$1,990</div>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <div class="text-sm text-gray-600">Active Positions</div>
+                    <div class="text-xl font-bold text-primary" data-bind="portfolio.activePositions">4</div>
+                </div>
+                <div class="bg-yellow-50 p-4 rounded-lg">
+                    <div class="text-sm text-gray-600">Avg Days to Expiry</div>
+                    <div class="text-xl font-bold text-yellow-700" data-bind="portfolio.avgDaysToExpiry">24.5</div>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg">
+                    <div class="text-sm text-gray-600">Total Risk Capital</div>
+                    <div class="text-xl font-bold text-purple-700" data-bind="portfolio.totalRisk">$45,280</div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: SummaryPanel -->
+    </main>
+    <!-- @END_COMPONENT: MainDashboard -->
+
+    <script>
+        // TODO: Implement real-time data fetching, chart interactions, and position management
+        (function() {
+            // Mock data for demonstration
+            const mockData = {
+                'AAPL': {
+                    currentPrice: 175.43,
+                    lowerBreakeven: 168.50,
+                    upperBreakeven: 182.50,
+                    maxProfit: 450
+                },
+                'TSLA': {
+                    currentPrice: 248.92,
+                    lowerBreakeven: 232.00,
+                    upperBreakeven: 268.00,
+                    maxProfit: 680
+                },
+                'SPY': {
+                    currentPrice: 442.18,
+                    lowerBreakeven: 438.80,
+                    upperBreakeven: 446.20,
+                    maxProfit: 320
+                },
+                'QQQ': {
+                    currentPrice: 378.45,
+                    lowerBreakeven: 371.60,
+                    upperBreakeven: 386.40,
+                    maxProfit: 540
+                }
+            };
+
+            // Generate P&L curve data for short strangle
+            function generatePLData(ticker) {
+                const data = mockData[ticker];
+                const prices = [];
+                const profits = [];
+                
+                const priceRange = data.upperBreakeven - data.lowerBreakeven;
+                const startPrice = data.lowerBreakeven - priceRange * 0.5;
+                const endPrice = data.upperBreakeven + priceRange * 0.5;
+                
+                for (let price = startPrice; price <= endPrice; price += 1) {
+                    prices.push(price);
+                    
+                    let profit;
+                    if (price <= data.lowerBreakeven) {
+                        profit = data.lowerBreakeven - price - data.maxProfit;
+                    } else if (price >= data.upperBreakeven) {
+                        profit = price - data.upperBreakeven - data.maxProfit;
+                    } else {
+                        profit = data.maxProfit;
+                    }
+                    
+                    profits.push(profit);
+                }
+                
+                return { prices, profits };
+            }
+
+            // Initialize charts for each ticker
+            function initChart(ticker) {
+                const ctx = document.getElementById(`chart-${ticker.toLowerCase()}`);
+                if (!ctx) return;
+                
+                const { prices, profits } = generatePLData(ticker);
+                const currentPrice = mockData[ticker].currentPrice;
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: prices,
+                        datasets: [{
+                            label: 'P&L',
+                            data: profits,
+                            borderColor: '#1E40AF',
+                            backgroundColor: 'rgba(30, 64, 175, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.1
+                        }, {
+                            label: 'Current Price',
+                            data: Array(prices.length).fill(null).map((_, i) => 
+                                Math.abs(prices[i] - currentPrice) < 1 ? profits[i] : null
+                            ),
+                            borderColor: '#DC2626',
+                            backgroundColor: '#DC2626',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            showLine: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: false
+                            },
+                            y: {
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.1)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value >= 0 ? '+$' + value : '-$' + Math.abs(value);
+                                    }
+                                }
+                            }
+                        },
+                        elements: {
+                            point: {
+                                radius: 0,
+                                hoverRadius: 4
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Initialize all charts
+            ['AAPL', 'TSLA', 'SPY', 'QQQ'].forEach(ticker => {
+                initChart(ticker);
+            });
+        })();
+    </script>
+</body>
+</html>
