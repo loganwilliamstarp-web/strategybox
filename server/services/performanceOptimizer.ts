@@ -2,6 +2,7 @@ import { WebSocket } from 'ws';
 import { storage } from '../storage';
 import { marketDataApiService } from '../marketDataApi';
 import type { TickerWithPosition } from '@shared/schema';
+import { getOptimalApiIntervals, getMarketSession, logMarketSession } from '../utils/marketHours';
 
 interface ConnectionInfo {
   ws: WebSocket;
@@ -49,13 +50,23 @@ export class PerformanceOptimizer {
   private readonly MAX_BATCH_SIZE = 10;
   private readonly INACTIVE_THRESHOLD = 5 * 60 * 1000; // 5 minutes
   
-  // Separate intervals for different data types
-  private readonly PRICE_UPDATE_INTERVAL = 60 * 1000; // 1 minute for price updates
-  private readonly OPTIONS_UPDATE_INTERVAL = 15 * 60 * 1000; // 15 minutes for options updates
+  // Dynamic intervals based on market hours (will be overridden by getOptimalIntervals)
+  private readonly PRICE_UPDATE_INTERVAL = 60 * 1000; // Base: 1 minute for price updates
+  private readonly OPTIONS_UPDATE_INTERVAL = 15 * 60 * 1000; // Base: 15 minutes for options updates
 
   constructor() {
     this.startBatchProcessor();
     this.startCacheCleanup();
+    
+    // Log initial market session
+    logMarketSession();
+  }
+  
+  /**
+   * Get current optimal intervals based on market hours
+   */
+  private getOptimalIntervals(): ApiIntervals {
+    return getOptimalApiIntervals();
   }
 
   /**
@@ -273,19 +284,28 @@ export class PerformanceOptimizer {
   }
 
   /**
-   * Start periodic updates for a user
+   * Start periodic updates for a user with market-aware intervals
    */
   private startUserUpdates(userId: string): void {
     if (this.updateIntervals.has(userId)) {
       return; // Already started
     }
 
+    // Use market-aware intervals
+    const intervals = this.getOptimalIntervals();
+    
     const interval = setInterval(async () => {
+      // Log market session periodically (every hour)
+      if (Date.now() % (60 * 60 * 1000) < intervals.stockPrice) {
+        logMarketSession();
+      }
+      
       await this.updateUserPositions(userId);
-    }, 60 * 1000); // Update every minute
+    }, intervals.stockPrice); // Dynamic interval based on market hours
 
     this.updateIntervals.set(userId, interval);
-    console.log(`⏰ Started updates for user ${userId}`);
+    console.log(`⏰ Started market-aware updates for user ${userId} (${intervals.description})`);
+    console.log(`   🔄 Update frequency: ${intervals.stockPrice / 1000}s`);
   }
 
   /**

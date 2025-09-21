@@ -37,6 +37,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import { useRealtimeData } from "@/hooks/useRealtimeData";
 import { useCapacitor } from "@/hooks/useCapacitor";
+import { getOptimalRefetchInterval, getMarketSession, getCurrentEasternTime } from "@/utils/marketHours";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   DropdownMenu,
@@ -346,9 +347,12 @@ export default function Dashboard() {
   }, [user, isRealtimeConnected, toast]);
 
   
+  // Get market-aware refresh intervals
+  const optimalIntervals = getOptimalRefetchInterval(isRealtimeConnected);
+  
   const { data: allTickers = [], isLoading: tickersLoading, refetch } = useQuery<TickerWithPosition[]>({
     queryKey: ["/api/tickers"], // Keep stable query key
-    refetchInterval: isRealtimeConnected ? false : 60 * 1000, // Only poll if WebSocket disconnected (1 min fallback)
+    refetchInterval: optimalIntervals.refetchInterval, // Market-aware intervals
     staleTime: 30 * 1000, // Cache for 30 seconds when WebSocket is active
     cacheTime: 60 * 1000, // Cache for 1 minute
     refetchOnWindowFocus: true, // Refetch when window regains focus
@@ -457,6 +461,39 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              {/* Market Session Indicator */}
+              <div className="hidden sm:flex items-center space-x-2">
+                {(() => {
+                  const session = getMarketSession();
+                  const etTime = getCurrentEasternTime();
+                  
+                  switch (session.sessionType) {
+                    case 'market':
+                      return (
+                        <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-xs">
+                          <div className="w-2 h-2 bg-white rounded-full mr-1 animate-pulse"></div>
+                          Market Open
+                        </Badge>
+                      );
+                    case 'extended':
+                      return (
+                        <Badge variant="secondary" className="bg-yellow-500 hover:bg-yellow-600 text-xs">
+                          <div className="w-2 h-2 bg-white rounded-full mr-1"></div>
+                          Extended Hours
+                        </Badge>
+                      );
+                    case 'closed':
+                      return (
+                        <Badge variant="outline" className="text-xs">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full mr-1"></div>
+                          Market Closed
+                        </Badge>
+                      );
+                  }
+                })()}
+                <span className="text-xs text-muted-foreground">{getCurrentEasternTime()} ET</span>
+              </div>
+              
               {/* Real-time Status Indicators */}
               <div className="flex items-center space-x-1 sm:space-x-2">
                 {/* WebSocket Connection Status */}

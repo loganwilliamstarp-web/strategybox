@@ -4,6 +4,7 @@ import { storage } from "../storage";
 import { performanceOptimizer } from "../services/performanceOptimizer";
 import { marketDataApiService } from "../marketDataApi";
 import { logger } from "../middleware/logger";
+import { getOptimalApiIntervals, logMarketSession } from "../utils/marketHours";
 
 // Simple cached calculation for expected weekly price range
 function calculateExpectedMove(currentPrice: number, impliedVolatility: number, daysToExpiry: number): {
@@ -255,11 +256,48 @@ export function setupWebSocket(httpServer: Server): void {
       } catch (error) {
         logger.error('Options update cycle failed', { error: error instanceof Error ? error.message : 'Unknown error' });
       }
-    }, 15 * 60 * 1000); // 15 minutes
+    }, getOptimalApiIntervals().optionsChain); // Market-aware interval
     
-    console.log('✅ Dual-interval update system started:');
-    console.log('   💰 Prices: Every 1 minute');
-    console.log('   📊 Options/Strikes: Every 15 minutes');
+    // Restart intervals when market session changes (every hour check)
+    setInterval(() => {
+      const newIntervals = getOptimalApiIntervals();
+      console.log(`🔄 Market session check - updating to ${newIntervals.description}`);
+      
+      // Clear and restart with new intervals
+      if (optionsUpdateInterval) {
+        clearInterval(optionsUpdateInterval);
+        
+        // Restart options update with new interval
+        optionsUpdateInterval = setInterval(async () => {
+          try {
+            const userIds = performanceOptimizer.getActiveUserIds();
+            
+            for (const userId of userIds) {
+              const tickers = await storage.getActiveTickersWithPositionsForUser(userId);
+              
+              // Update options data for all user's symbols
+              for (const ticker of tickers) {
+                try {
+                  await performanceOptimizer.refreshSymbol(ticker.symbol, true);
+                  // ... rest of options update logic
+                } catch (error) {
+                  console.error(`❌ Error refreshing ${ticker.symbol}:`, error);
+                }
+              }
+            }
+            
+          } catch (error) {
+            logger.error('Options update cycle failed', { error: error instanceof Error ? error.message : 'Unknown error' });
+          }
+        }, newIntervals.optionsChain);
+      }
+    }, 60 * 60 * 1000); // Check every hour
+    
+    // Log initial market session and intervals
+    logMarketSession();
+    console.log('✅ Market-aware dual-interval update system started:');
+    console.log('   💰 Prices: Dynamic based on market hours');
+    console.log('   📊 Options/Strikes: Dynamic based on market hours');
   };
 
   const stopDualIntervalUpdates = () => {
