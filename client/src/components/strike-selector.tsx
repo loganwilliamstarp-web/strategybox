@@ -116,9 +116,19 @@ export function StrikeSelector({
     );
   }
 
-  // Filter and format puts (strikes below current price)
+  // Filter and format puts - Include more strikes around current price for better selection
   let puts: OptionStrike[] = chainData.puts
-    .filter((put: any) => put.strike <= currentPrice && put.bid > 0 && put.ask > 0)
+    .filter((put: any) => {
+      // Include strikes within 20% of current price (both above and below)
+      const priceRange = currentPrice * 0.2;
+      const withinRange = Math.abs(put.strike - currentPrice) <= priceRange;
+      const hasValidBidAsk = put.bid > 0 && put.ask > 0;
+      
+      // Always include strikes very close to current price (within $5)
+      const veryClose = Math.abs(put.strike - currentPrice) <= 5;
+      
+      return (withinRange || veryClose) && hasValidBidAsk;
+    })
     .map((put: any) => ({
       strike: put.strike,
       bid: put.bid,
@@ -130,9 +140,19 @@ export function StrikeSelector({
     }))
     .sort((a: any, b: any) => b.strike - a.strike); // Highest strike first
 
-  // Filter and format calls (strikes above current price)
+  // Filter and format calls - Include more strikes around current price for better selection
   let calls: OptionStrike[] = chainData.calls
-    .filter((call: any) => call.strike >= currentPrice && call.bid > 0 && call.ask > 0)
+    .filter((call: any) => {
+      // Include strikes within 20% of current price (both above and below)
+      const priceRange = currentPrice * 0.2;
+      const withinRange = Math.abs(call.strike - currentPrice) <= priceRange;
+      const hasValidBidAsk = call.bid > 0 && call.ask > 0;
+      
+      // Always include strikes very close to current price (within $5)
+      const veryClose = Math.abs(call.strike - currentPrice) <= 5;
+      
+      return (withinRange || veryClose) && hasValidBidAsk;
+    })
     .map((call: any) => ({
       strike: call.strike,
       bid: call.bid,

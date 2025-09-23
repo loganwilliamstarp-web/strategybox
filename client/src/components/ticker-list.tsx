@@ -8,11 +8,29 @@ import type { TickerWithPosition } from "@shared/schema";
 
 interface TickerListProps {
   tickers: TickerWithPosition[];
+  selectedExpiration?: string;
 }
 
-export function TickerList({ tickers }: TickerListProps) {
+export function TickerList({ tickers, selectedExpiration }: TickerListProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Helper function to calculate days to expiration
+  const calculateDaysToExpiration = (ticker: TickerWithPosition) => {
+    if (selectedExpiration) {
+      const today = new Date();
+      const expirationDate = new Date(selectedExpiration + 'T16:00:00'); // Market close time
+      const diffTime = expirationDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return Math.max(0, diffDays); // Don't show negative days
+    }
+    return ticker.position.daysToExpiry;
+  };
+
+  // Helper function to get display expiration date
+  const getDisplayExpirationDate = (ticker: TickerWithPosition) => {
+    return selectedExpiration || ticker.position.expirationDate;
+  };
 
   const removeMutation = useMutation({
     mutationFn: async (symbol: string) => {
@@ -179,10 +197,10 @@ export function TickerList({ tickers }: TickerListProps) {
                   <td className="px-4 py-4">
                     <div className="flex flex-col items-start space-y-1">
                       <span className="text-sm font-medium text-foreground" data-testid={`text-days-${ticker.symbol}`}>
-                        {position.daysToExpiry}
+                        {calculateDaysToExpiration(ticker)}
                       </span>
                       <span className="text-xs text-muted-foreground" data-testid={`text-expiry-date-${ticker.symbol}`}>
-                        {new Date(position.expirationDate).toLocaleDateString('en-US', { 
+                        {new Date(getDisplayExpirationDate(ticker)).toLocaleDateString('en-US', { 
                           month: 'short', 
                           day: 'numeric' 
                         })}
