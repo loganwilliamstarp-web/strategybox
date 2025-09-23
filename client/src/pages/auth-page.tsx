@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
+import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { useEffect } from "react";
 import { 
   TrendingUp, 
@@ -27,6 +28,7 @@ export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const { refreshAllData, isRefreshing } = useDataRefresh();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -68,13 +70,29 @@ export default function AuthPage() {
       }
       return await response.json();
     },
-    onSuccess: (user) => {
+    onSuccess: async (user) => {
       queryClient.setQueryData(["/api/auth/user"], user);
+      
       toast({
-        title: "Welcome back!",
-        description: "You've been successfully logged in.",
+        title: "Welcome back! 🎉",
+        description: "You've been successfully logged in. Refreshing your data...",
+        duration: 2000,
       });
-      setLocation("/");
+
+      // Trigger comprehensive data refresh on successful login
+      try {
+        console.log("🔄 Triggering data refresh after login...");
+        refreshAllData();
+        
+        // Small delay to let the refresh start, then navigate
+        setTimeout(() => {
+          setLocation("/");
+        }, 500);
+      } catch (error) {
+        console.error("Failed to trigger data refresh:", error);
+        // Still navigate even if refresh fails
+        setLocation("/");
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -257,10 +275,10 @@ export default function AuthPage() {
                       <Button 
                         type="submit" 
                         className="w-full mb-2" 
-                        disabled={loginMutation.isPending}
+                        disabled={loginMutation.isPending || isRefreshing}
                         data-testid="button-login"
                       >
-                        {loginMutation.isPending ? "Signing in..." : "Sign In"}
+                        {isRefreshing ? "Refreshing Data..." : loginMutation.isPending ? "Signing in..." : "Sign In"}
                       </Button>
                       
                       {/* Quick Demo Login */}

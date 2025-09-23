@@ -176,6 +176,27 @@ export class PerformanceOptimizer {
   }
 
   /**
+   * Clear all caches (for login refresh)
+   */
+  clearAllCaches(): void {
+    console.log('🧹 Clearing all performance optimizer caches...');
+    this.quoteCache.clear();
+    this.optionsCache.clear();
+    console.log('✅ Performance optimizer caches cleared');
+  }
+
+  /**
+   * Get cache sizes for monitoring
+   */
+  getCacheSize(): number {
+    return this.quoteCache.size;
+  }
+
+  getOptionsCacheSize(): number {
+    return this.optionsCache.size;
+  }
+
+  /**
    * Batch process quote requests
    */
   private addToBatchQueue(symbol: string, userId: string): void {

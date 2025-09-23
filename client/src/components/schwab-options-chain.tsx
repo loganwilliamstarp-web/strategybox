@@ -35,16 +35,29 @@ interface SchwabOptionsChainProps {
   symbol: string;
   isOpen: boolean;
   onClose: () => void;
+  selectedExpiration?: string; // Add expiration prop from dashboard
   onExpirationChange?: (expiration: string) => void;
   testId?: string;
 }
 
-export function SchwabOptionsChain({ symbol, isOpen, onClose, onExpirationChange, testId = "schwab-options-chain" }: SchwabOptionsChainProps) {
+export function SchwabOptionsChain({ symbol, isOpen, onClose, selectedExpiration: dashboardExpiration, onExpirationChange, testId = "schwab-options-chain" }: SchwabOptionsChainProps) {
   const [optionsData, setOptionsData] = useState<OptionsChainData | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedExpiration, setSelectedExpiration] = useState<string>("");
   const [expandedExpirations, setExpandedExpirations] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState<string>("");
+
+  // Sync with dashboard expiration selection
+  useEffect(() => {
+    if (dashboardExpiration && dashboardExpiration !== selectedExpiration) {
+      console.log(`📅 SchwabOptionsChain syncing with dashboard expiration: ${dashboardExpiration}`);
+      setSelectedExpiration(dashboardExpiration);
+      // Expand the new expiration
+      setExpandedExpirations(new Set([dashboardExpiration]));
+      // Force refresh of options data
+      fetchOptionsChain();
+    }
+  }, [dashboardExpiration]);
 
   const fetchOptionsChain = async () => {
     if (!symbol) return;

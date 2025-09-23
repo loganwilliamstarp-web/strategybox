@@ -64,7 +64,7 @@ export function StrikeSelector({
   const [selectedExpiration, setSelectedExpiration] = useState<string>("");
 
   const { data: optionsData, isLoading } = useQuery<OptionsChainData>({
-    queryKey: ["/api/market-data/options-chain", symbol],
+    queryKey: [`/api/market-data/options-chain/${symbol}`],
     enabled: !!symbol,
     refetchInterval: 15 * 60 * 1000, // Refresh every 15 minutes to match premium updates
     staleTime: 5 * 60 * 1000, // Consider stale after 5 minutes

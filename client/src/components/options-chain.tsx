@@ -13,19 +13,31 @@ interface OptionsChainProps {
   symbol: string;
   isOpen: boolean;
   onClose: () => void;
+  selectedExpiration?: string; // Add expiration prop from dashboard
   currentPrice?: number;
 }
 
-export function OptionsChainComponent({ symbol, isOpen, onClose, currentPrice }: OptionsChainProps) {
+export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpiration: dashboardExpiration, currentPrice }: OptionsChainProps) {
   const [selectedExpiration, setSelectedExpiration] = useState<string>("");
   const [selectedTab, setSelectedTab] = useState<"calls" | "puts">("calls");
 
-  const { data: optionsData, isLoading, error } = useQuery<any>({
-    queryKey: [`/api/market-data/options-chain/${symbol}`],
-    enabled: !!symbol && isOpen,
-    refetchInterval: 15 * 60 * 1000, // Refresh every 15 minutes to match premium updates
-    staleTime: 5 * 60 * 1000, // Consider stale after 5 minutes
-  });
+  const { 
+    optionsChain: optionsData, 
+    isLoading, 
+    error, 
+    getAvailableExpirations,
+    forceRefresh 
+  } = useOptionsChain(symbol, !!symbol && isOpen);
+
+  // Sync with dashboard expiration selection
+  useEffect(() => {
+    if (dashboardExpiration && dashboardExpiration !== selectedExpiration) {
+      console.log(`📅 OptionsChain syncing with dashboard expiration: ${dashboardExpiration}`);
+      setSelectedExpiration(dashboardExpiration);
+      // Force refresh when dashboard expiration changes
+      forceRefresh();
+    }
+  }, [dashboardExpiration]);
 
 
 

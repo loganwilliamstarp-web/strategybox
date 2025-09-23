@@ -16,7 +16,7 @@ import { StrategyScreener } from "@/components/strategy-screener";
 import { MarketSentiment } from "@/components/market-sentiment";
 import { PerformanceStoryTeller } from "@/components/performance-storyteller";
 import { RiskMeter } from "@/components/risk-meter";
-import { SchwabOptionsChain } from "@/components/schwab-options-chain";
+import { OptionsChainComponent } from "@/components/options-chain";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
 import { PriceAlerts } from "@/components/price-alerts";
@@ -37,6 +37,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import { useRealtimeData } from "@/hooks/useRealtimeData";
 import { useCapacitor } from "@/hooks/useCapacitor";
+import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { getOptimalRefetchInterval, getMarketSession, getCurrentEasternTime } from "@/utils/marketHours";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -53,6 +54,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { isConnected: isRealtimeConnected, lastUpdate, updateCount } = useRealtimeData();
   const { isNative, triggerHaptics } = useCapacitor();
+  const { refreshAllData, isRefreshing } = useDataRefresh();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isFirstLogin, setIsFirstLogin] = useState(false);
@@ -636,13 +638,26 @@ export default function Dashboard() {
                   variant="outline"
                   size="sm"
                   onClick={() => refreshEarningsMutation.mutate()}
-                  disabled={refreshEarningsMutation.isPending || isAutoRefreshing}
+                  disabled={refreshEarningsMutation.isPending || isAutoRefreshing || isRefreshing}
                   data-testid="button-refresh-earnings"
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 ${(refreshEarningsMutation.isPending || isAutoRefreshing) ? 'animate-spin' : ''}`} />
                   {isAutoRefreshing ? "Auto-Updating..." : refreshEarningsMutation.isPending ? "Refreshing..." : "Refresh Market Data"}
                 </Button>
               )}
+
+              {/* Comprehensive Data Refresh Button */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={refreshAllData}
+                disabled={isRefreshing || refreshEarningsMutation.isPending}
+                data-testid="button-refresh-all-data"
+                className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? "Refreshing All Data..." : "Refresh All Data"}
+              </Button>
 
               {/* Position Comparison */}
               <Button 
@@ -835,15 +850,15 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Schwab-Style Options Chain Modal */}
-        <SchwabOptionsChain 
+        {/* Options Chain Modal */}
+        <OptionsChainComponent 
           symbol={selectedOptionsSymbol}
           isOpen={isOptionsChainOpen}
+          selectedExpiration={selectedExpiration}
           onClose={() => {
             setIsOptionsChainOpen(false);
             setSelectedOptionsSymbol("");
           }}
-          onExpirationChange={handleExpirationChange}
         />
 
         {/* Volatility Surface Modal */}

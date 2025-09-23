@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { BarChart2, TrendingUp, TrendingDown, DollarSign, Activity, Calculator } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useOptionsChain } from "@/hooks/useOptionsChain";
 
 interface OptionsContract {
   strike: number;
@@ -66,10 +67,11 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   symbol: string;
+  selectedExpiration?: string; // Add expiration prop from dashboard
   onAddPosition?: (data: any) => void;
 }
 
-export function MarketDataOptionsChain({ isOpen, onClose, symbol, onAddPosition }: Props) {
+export function MarketDataOptionsChain({ isOpen, onClose, symbol, selectedExpiration: dashboardExpiration, onAddPosition }: Props) {
   const [selectedExpiration, setSelectedExpiration] = useState<string>("");
   const [daysToExpiry, setDaysToExpiry] = useState(30);
   const [selectedPutStrike, setSelectedPutStrike] = useState<number>(0);
@@ -77,19 +79,30 @@ export function MarketDataOptionsChain({ isOpen, onClose, symbol, onAddPosition 
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Sync with dashboard expiration selection
+  useEffect(() => {
+    if (dashboardExpiration && dashboardExpiration !== selectedExpiration) {
+      console.log(`📅 Options chain syncing with dashboard expiration: ${dashboardExpiration}`);
+      setSelectedExpiration(dashboardExpiration);
+      // Force refresh when dashboard expiration changes
+      forceRefresh();
+    }
+  }, [dashboardExpiration]);
+
   // Check Market Data API status
   const { data: marketDataStatus } = useQuery<{ configured: boolean; status: string }>({
     queryKey: ["/api/market-data/status"],
     enabled: isOpen,
   });
 
-  // Get Market Data options chain
-  const { data: optionsChain, isLoading: chainLoading } = useQuery<SchwabOptionsChain>({
-    queryKey: ["/api/market-data/options-chain", symbol, selectedExpiration],
-    enabled: isOpen && !!symbol && marketDataStatus?.configured,
-    refetchInterval: 15 * 60 * 1000, // Refresh every 15 minutes to match premium updates
-    staleTime: 5 * 60 * 1000, // Consider stale after 5 minutes
-  });
+  // Get Market Data options chain using unified hook
+  const { 
+    optionsChain, 
+    isLoading: chainLoading, 
+    invalidateCache, 
+    forceRefresh,
+    getAvailableExpirations 
+  } = useOptionsChain(symbol, isOpen && !!marketDataStatus?.configured);
 
   // Calculate position with real market premiums  
   const { data: strangleData, isLoading: strangleLoading } = useQuery<SchwabStrangleData>({
@@ -121,6 +134,14 @@ export function MarketDataOptionsChain({ isOpen, onClose, symbol, onAddPosition 
       });
     },
   });
+
+  // Handle expiration date change with cache invalidation
+  const handleExpirationChange = (newExpiration: string) => {
+    console.log(`📅 Expiration changed to: ${newExpiration}`);
+    setSelectedExpiration(newExpiration);
+    // Force refresh to get fresh data for new expiration
+    forceRefresh();
+  };
 
   const handleAddPosition = () => {
     if (!strangleData?.recommendedStrikes) {
@@ -428,11 +449,20 @@ export function MarketDataOptionsChain({ isOpen, onClose, symbol, onAddPosition 
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {optionsChain.calls.map((call) => {
-                            const put = optionsChain.puts.find(p => p.strike === call.strike);
-                            const isATM = Math.abs(call.strike - optionsChain.underlyingPrice) < 5; // Within $5 of current price
+                          {(() => {
+                            // Filter options by selected expiration
+                            const filteredOptions = selectedExpiration 
+                              ? optionsChain.options.filter((opt: any) => opt.expiration_date === selectedExpiration)
+                              : optionsChain.options;
                             
-                            return (
+                            const calls = filteredOptions.filter((opt: any) => opt.contract_type === 'call');
+                            const puts = filteredOptions.filter((opt: any) => opt.contract_type === 'put');
+                            
+                            return calls.map((call: any) => {
+                              const put = puts.find((p: any) => p.strike === call.strike);
+                              const isATM = Math.abs(call.strike - optionsChain.underlyingPrice) < 5; // Within $5 of current price
+                            
+                              return (
                               <TableRow 
                                 key={call.strike} 
                                 className={`hover:bg-muted/50 ${isATM ? 'bg-yellow-50 dark:bg-yellow-950/30' : ''}`}
@@ -502,8 +532,9 @@ export function MarketDataOptionsChain({ isOpen, onClose, symbol, onAddPosition 
                                   –
                                 </TableCell>
                               </TableRow>
-                            );
-                          })}
+                              );
+                            });
+                          })()}
                         </TableBody>
                       </Table>
                     </ScrollArea>
