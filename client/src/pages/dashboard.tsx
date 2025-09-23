@@ -834,7 +834,6 @@ export default function Dashboard() {
                 <TickerCard 
                   key={ticker.id} 
                   ticker={ticker} 
-                  selectedExpiration={selectedExpiration}
                   onViewOptions={(symbol) => {
                     setSelectedOptionsSymbol(symbol);
                     setIsOptionsChainOpen(true);
@@ -847,7 +846,7 @@ export default function Dashboard() {
               ))}
             </div>
           ) : (
-            <TickerList tickers={tickers} selectedExpiration={selectedExpiration} />
+            <TickerList tickers={tickers} />
           )}
         </div>
 

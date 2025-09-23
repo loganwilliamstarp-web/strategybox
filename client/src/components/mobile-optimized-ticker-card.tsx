@@ -11,12 +11,14 @@ import type { TickerWithPosition } from "@shared/schema";
 
 interface MobileTickerCardProps {
   ticker: TickerWithPosition;
+  selectedExpiration?: string;
   onViewOptions?: (symbol: string) => void;
   onViewVolatilitySurface?: (symbol: string) => void;
 }
 
 const MobileTickerCard = memo(function MobileTickerCard({ 
   ticker, 
+  selectedExpiration,
   onViewOptions, 
   onViewVolatilitySurface 
 }: MobileTickerCardProps) {
@@ -26,6 +28,21 @@ const MobileTickerCard = memo(function MobileTickerCard({
   const queryClient = useQueryClient();
   const isMobile = useMobile();
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Calculate days to expiration based on dashboard selection or position data
+  const calculateDaysToExpiration = () => {
+    if (selectedExpiration) {
+      const today = new Date();
+      const expirationDate = new Date(selectedExpiration + 'T16:00:00'); // Market close time
+      const diffTime = expirationDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return Math.max(0, diffDays); // Don't show negative days
+    }
+    return position.daysToExpiry;
+  };
+
+  const displayExpirationDate = selectedExpiration || position.expirationDate;
+  const daysToExpiration = calculateDaysToExpiration();
   
   const removeMutation = useMutation({
     mutationFn: async () => {
@@ -241,7 +258,7 @@ const MobileTickerCard = memo(function MobileTickerCard({
 
             {/* Expiration Info */}
             <div className="text-center text-xs text-muted-foreground bg-gray-50 border border-gray-200 rounded-lg p-2">
-              {position.daysToExpiry}d to expiration • {new Date(position.expirationDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
+              {daysToExpiration}d to expiration • {new Date(displayExpirationDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
             </div>
           </div>
         )}

@@ -37,30 +37,15 @@ const getStrategyIcon = (strategyType: string | undefined) => {
 
 interface TickerCardProps {
   ticker: TickerWithPosition;
-  selectedExpiration?: string; // Add expiration prop from dashboard
   onViewOptions?: (symbol: string) => void;
   onViewVolatilitySurface?: (symbol: string) => void;
 }
 
-const TickerCard = memo(function TickerCard({ ticker, selectedExpiration, onViewOptions, onViewVolatilitySurface }: TickerCardProps) {
+const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolatilitySurface }: TickerCardProps) {
   const { position } = ticker;
   const isPositiveChange = ticker.priceChange >= 0;
   const { isNative, triggerHaptics } = useCapacitor();
 
-  // Calculate days to expiration based on dashboard selection or position data
-  const calculateDaysToExpiration = () => {
-    if (selectedExpiration) {
-      const today = new Date();
-      const expirationDate = new Date(selectedExpiration + 'T16:00:00'); // Market close time
-      const diffTime = expirationDate.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return Math.max(0, diffDays); // Don't show negative days
-    }
-    return position.daysToExpiry;
-  };
-
-  const displayExpirationDate = selectedExpiration || position.expirationDate;
-  const daysToExpiration = calculateDaysToExpiration();
   
   // Fetch individual IV values for the specific strikes
   const [individualIV, setIndividualIV] = useState<{ callIV: number; putIV: number } | null>(null);
@@ -372,10 +357,10 @@ const TickerCard = memo(function TickerCard({ ticker, selectedExpiration, onView
       <div className="flex justify-between items-center mb-4">
         <div className="text-xs text-muted-foreground flex items-center">
           <CalendarDays className="h-3 w-3 mr-1" />
-          {daysToExpiration}d to expiration
+          {position.daysToExpiry}d to expiration
         </div>
         <div className="text-xs text-muted-foreground">
-          {new Date(displayExpirationDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit', weekday: 'short' })}
+          {new Date(position.expirationDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit', weekday: 'short' })}
         </div>
       </div>
 
@@ -741,7 +726,7 @@ const TickerCard = memo(function TickerCard({ ticker, selectedExpiration, onView
         <span>
           {ticker.earningsDate ? 
             `Next Earnings: ${new Date(ticker.earningsDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}` :
-            `Days to Exp: ${daysToExpiration}`
+            `Days to Exp: ${position.daysToExpiry}`
           }
         </span>
       </div>
