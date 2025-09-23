@@ -84,10 +84,14 @@ export default function AuthPage() {
         console.log("🔄 Triggering data refresh after login...");
         refreshAllData();
         
-        // Small delay to let the refresh start, then navigate
+        // Force authentication state refresh and then navigate
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        
+        // Small delay to let the auth state update, then navigate
         setTimeout(() => {
+          console.log("🔄 Navigating to dashboard after login...");
           setLocation("/");
-        }, 500);
+        }, 1000);
       } catch (error) {
         console.error("Failed to trigger data refresh:", error);
         // Still navigate even if refresh fails

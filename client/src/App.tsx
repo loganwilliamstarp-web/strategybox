@@ -12,7 +12,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCapacitor } from "@/hooks/useCapacitor";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  // Debug logging
+  console.log('🔍 Router state:', { isLoading, isAuthenticated, user: user?.email });
 
   return (
     <Switch>
