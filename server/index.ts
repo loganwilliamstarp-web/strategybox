@@ -90,11 +90,6 @@ app.use('/api/', rateLimitRules.general);
     const server = await registerRoutes(app);
     log("Routes registered successfully");
 
-    // Initialize WebSocket server
-    const { setupWebSocket } = await import('./routes/websocket');
-    setupWebSocket(server);
-    log("✅ WebSocket server initialized");
-
     // Setup frontend serving BEFORE 404 handler
     if (env.get('NODE_ENV') === "development") {
       log("Setting up Vite for development...");

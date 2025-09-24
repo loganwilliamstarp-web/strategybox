@@ -450,10 +450,21 @@ class MarketDataApiService implements OptionsDataProvider {
         console.log(`📊 getOptionsChain: Using MARKET QUOTE for ${symbol} = $${currentPrice}`);
       }
 
-      // STEP 1: Get all available expirations with no limits to see what's available
+      // STEP 1: Get all available expirations with date range to capture all Friday expirations
       console.log(`🔄 STEP 1: Getting all available expirations for ${symbol}...`);
+      
+      // Calculate date range to ensure we get all Friday expiration dates including 09/26
+      const today = new Date();
+      const fromDate = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000)); // 1 week ago to capture near-term
+      const toDate = new Date(today.getTime() + (90 * 24 * 60 * 60 * 1000)); // 90 days out to capture multiple cycles
+      
+      const fromDateStr = fromDate.toISOString().split('T')[0];
+      const toDateStr = toDate.toISOString().split('T')[0];
+      
+      console.log(`📅 Date range: ${fromDateStr} to ${toDateStr} (to capture all Friday expirations including 09/26)`);
+      
       const allExpirationsData: MarketDataOptionsChain = await this.makeRequest(
-        `/v1/options/chain/${symbol}/?strikeLimit=1000`
+        `/v1/options/chain/${symbol}/?from=${fromDateStr}&to=${toDateStr}&strikeLimit=1000`
       );
       
       if (allExpirationsData.s !== 'ok' || !allExpirationsData.expiration) {
