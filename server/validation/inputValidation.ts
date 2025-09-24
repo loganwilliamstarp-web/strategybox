@@ -64,28 +64,16 @@ export const positionUpdateSchema = z.object({
   strategyType: strategyTypeSchema.optional(),
   expirationDate: expirationDateSchema.optional(),
   recalculateWithNewStrategy: z.boolean().optional()
-}).refine(data => {
-  // Custom validation for strike relationships
-  if (data.longPutStrike && data.longCallStrike) {
-    return data.longPutStrike < data.longCallStrike;
-  }
-  return true;
-}, {
-  message: "Put strike must be lower than call strike",
-  path: ["longPutStrike"]
 });
+// REMOVED: Strike relationship validation - allows flexible positioning strategies
 
 // Custom strikes validation
 export const customStrikesSchema = z.object({
   customPutStrike: strikeSchema,
   customCallStrike: strikeSchema,
   expirationDate: expirationDateSchema
-}).refine(data => {
-  return data.customPutStrike < data.customCallStrike;
-}, {
-  message: "Put strike must be lower than call strike",
-  path: ["customPutStrike"]
 });
+// REMOVED: Custom strike validation - allows flexible positioning strategies
 
 // Ticker creation validation
 export const createTickerSchema = z.object({

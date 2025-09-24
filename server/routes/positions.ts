@@ -99,10 +99,7 @@ export function registerPositionRoutes(app: Express): void {
         return;
       }
       
-      if (putStrike >= callStrike) {
-        res.status(400).json({ message: "Put strike must be lower than call strike" });
-        return;
-      }
+      // REMOVED: Strike validation - allows flexible positioning strategies
       
       const updatedPosition = await storage.updatePosition(id, userId, {
         longPutStrike: putStrike,
@@ -148,10 +145,7 @@ export function registerPositionRoutes(app: Express): void {
         return;
       }
       
-      if (putStrike >= callStrike) {
-        res.status(400).json({ message: "Put strike must be lower than call strike" });
-        return;
-      }
+      // REMOVED: Custom strike validation - allows flexible positioning strategies
       
       console.log(`Setting custom strikes for position ${id}: Put ${putStrike}, Call ${callStrike}, Expiration ${expirationDate}`);
       
