@@ -288,25 +288,15 @@ export function registerTickerRoutes(app: Express): void {
       
       // Ensure user record exists before creating ticker
       try {
-        const existingUser = await storage.getUser(userId);
-        if (!existingUser) {
-          console.log(`🔧 Creating user record for ticker creation: ${req.user.email}`);
-          await storage.createUser({
-            id: userId,
-            email: req.user.email,
-            firstName: req.user.firstName || '',
-            lastName: req.user.lastName || '',
-            password: '',
-            createdAt: new Date(),
-            updatedAt: new Date()
-          });
-          console.log(`✅ User record created for ticker creation: ${req.user.email}`);
-        }
-      } catch (userError: any) {
-        if (userError.code !== '23505') { // Ignore duplicate key errors
-          console.error('❌ Failed to ensure user record:', userError);
-          return res.status(500).json({ message: "User setup failed" });
-        }
+        await storage.createOrUpdateUser({
+          id: userId,
+          email: req.user.email,
+          firstName: req.user.firstName || '',
+          lastName: req.user.lastName || '',
+        });
+      } catch (userError) {
+        console.error('❌ Failed to ensure user record:', userError);
+        return res.status(500).json({ message: "User setup failed" });
       }
       
       const { symbol } = addTickerSchema.parse(req.body);
