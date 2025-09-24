@@ -38,10 +38,12 @@ interface SchwabOptionsChainProps {
   onClose: () => void;
   selectedExpiration?: string; // Add expiration prop from dashboard
   onExpirationChange?: (expiration: string) => void;
+  userCallStrike?: number; // User's call strike for highlighting
+  userPutStrike?: number; // User's put strike for highlighting
   testId?: string;
 }
 
-export function SchwabOptionsChain({ symbol, isOpen, onClose, selectedExpiration: dashboardExpiration, onExpirationChange, testId = "schwab-options-chain" }: SchwabOptionsChainProps) {
+export function SchwabOptionsChain({ symbol, isOpen, onClose, selectedExpiration: dashboardExpiration, onExpirationChange, userCallStrike, userPutStrike, testId = "schwab-options-chain" }: SchwabOptionsChainProps) {
   // Don't render anything if modal is closed or no symbol
   if (!isOpen || !symbol) {
     return null;
@@ -309,13 +311,16 @@ export function SchwabOptionsChain({ symbol, isOpen, onClose, selectedExpiration
                   const putOption = strikeGroups[strike]?.puts[0];
                   const callOption = strikeGroups[strike]?.calls[0];
                   const isAtm = Math.abs(strike - optionsData.underlyingPrice) < 5;
+                  const isUserStrike = strike === userCallStrike || strike === userPutStrike;
                   const isEvenRow = index % 2 === 0;
 
                   return (
                     <div 
                       key={strike} 
                       className={`grid grid-cols-7 gap-0 hover:bg-blue-50 hover:shadow-md border-b border-gray-300 ${
-                        isAtm ? 'bg-yellow-50 border-yellow-200' : isEvenRow ? 'bg-white' : 'bg-gray-50'
+                        isUserStrike ? 'bg-yellow-50 border-l-4 border-l-yellow-400 border-yellow-200' : 
+                        isAtm ? 'bg-yellow-50 border-yellow-200' : 
+                        isEvenRow ? 'bg-white' : 'bg-gray-50'
                       }`}
                       data-testid={`strike-${strike}`}
                     >
