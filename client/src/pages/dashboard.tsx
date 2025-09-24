@@ -357,23 +357,19 @@ export default function Dashboard() {
     refetchOnWindowFocus: false, // Disable aggressive refetching - WebSocket handles updates
     refetchOnMount: true, // Refetch once on mount
     refetchIntervalInBackground: false, // Let WebSocket handle background updates
-    onSuccess: (data) => {
-      console.log('📊 Dashboard: Ticker data updated', data.length, 'tickers');
-      console.log('📊 Dashboard: Raw ticker data:', JSON.stringify(data, null, 2));
-      data.forEach((ticker: TickerWithPosition) => {
+  });
+
+  // Log ticker data when it changes (React Query v5 compatible)
+  useEffect(() => {
+    if (allTickers && allTickers.length > 0) {
+      console.log('📊 Dashboard: Ticker data updated', allTickers.length, 'tickers');
+      console.log('📊 Dashboard: Raw ticker data:', JSON.stringify(allTickers, null, 2));
+      allTickers.forEach((ticker: TickerWithPosition) => {
         console.log(`📈 ${ticker.symbol}: $${ticker.currentPrice} (${ticker.priceChange >= 0 ? '+' : ''}${ticker.priceChangePercent}%)`);
       });
-    },
-    onError: (error) => {
-      console.error('❌ Dashboard: Ticker query error:', error);
-    },
-    onSettled: (data, error) => {
-      console.log('📊 Dashboard: Query settled', { dataLength: data?.length, error: error?.message });
-      if (data && data.length > 0) {
-        console.log('📊 Dashboard: First ticker data:', JSON.stringify(data[0], null, 2));
-      }
-    },
-  });
+      console.log('📊 Dashboard: First ticker data:', JSON.stringify(allTickers[0], null, 2));
+    }
+  }, [allTickers]);
 
   // Only force refetch if WebSocket is disconnected
   useEffect(() => {
