@@ -114,8 +114,8 @@ export default function Dashboard() {
     },
     onSuccess: async (data) => {
       // Force immediate refresh of ticker data to show updated strikes
-      await queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-      await queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
+      // Just invalidate - let React Query handle timing based on component needs
+      await queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
       await queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
       
       const { successful, failed } = data;
@@ -379,11 +379,12 @@ export default function Dashboard() {
     if (!isRealtimeConnected) {
       const interval = setInterval(() => {
         console.log('🔄 FORCE REFETCH - WebSocket disconnected, using polling fallback');
-        refetch();
+        // Use queryClient.refetchQueries instead of the changing refetch function
+        queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
       }, 60000); // 1 minute fallback when WebSocket is down
       return () => clearInterval(interval);
     }
-  }, [refetch, isRealtimeConnected]);
+  }, [isRealtimeConnected, queryClient]); // Remove refetch from deps to prevent infinite loops
 
   // Debug refetch calls
   useEffect(() => {

@@ -1,0 +1,1083 @@
+client:536 WebSocket connection to 'wss://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/?token=Oard0tc47X4g' failed: 
+setupWebSocket @ client:536
+(anonymous) @ client:531
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=Oard0tc47X4g' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+setupWebSocket @ client:536
+fallback @ client:509
+(anonymous) @ client:555
+chunk-276SZO74.js?v=a3296f3f:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+App.tsx:18 🔍 Router state: {isLoading: true, isAuthenticated: false, user: undefined}
+supabaseAuth.ts:25 🔄 No existing Supabase session found on startup
+useAuth.ts:17 🔍 Initial auth check: {hasUser: false, hasToken: false, userEmail: undefined}
+App.tsx:18 🔍 Router state: {isLoading: true, isAuthenticated: false, user: undefined}
+useAuth.ts:57 ❌ No Supabase session found
+App.tsx:18 🔍 Router state: {isLoading: false, isAuthenticated: false, user: undefined}
+useAuth.ts:17 🔍 Initial auth check: {hasUser: false, hasToken: false, userEmail: undefined}
+supabaseAuth.ts:46 ❌ Supabase auth state changed: user logged out
+contentScript.js:2 Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'toLowerCase')
+    at r (contentScript.js:2:590083)
+    at contentScript.js:2:589433
+    at f (contentScript.js:2:578063)
+    at Generator.<anonymous> (contentScript.js:2:579406)
+    at Generator.next (contentScript.js:2:578492)
+    at ca (contentScript.js:2:583969)
+    at i (contentScript.js:2:589915)
+r @ contentScript.js:2
+(anonymous) @ contentScript.js:2
+f @ contentScript.js:2
+(anonymous) @ contentScript.js:2
+(anonymous) @ contentScript.js:2
+ca @ contentScript.js:2
+i @ contentScript.js:2
+Promise.then
+ca @ contentScript.js:2
+i @ contentScript.js:2
+Promise.then
+ca @ contentScript.js:2
+i @ contentScript.js:2
+(anonymous) @ contentScript.js:2
+(anonymous) @ contentScript.js:2
+(anonymous) @ contentScript.js:2
+contentScript.js:2 Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'toLowerCase')
+    at r (contentScript.js:2:590083)
+    at contentScript.js:2:589433
+    at f (contentScript.js:2:578063)
+    at Generator.<anonymous> (contentScript.js:2:579406)
+    at Generator.next (contentScript.js:2:578492)
+    at ca (contentScript.js:2:583969)
+    at i (contentScript.js:2:589915)
+r @ contentScript.js:2
+(anonymous) @ contentScript.js:2
+f @ contentScript.js:2
+(anonymous) @ contentScript.js:2
+(anonymous) @ contentScript.js:2
+ca @ contentScript.js:2
+i @ contentScript.js:2
+Promise.then
+ca @ contentScript.js:2
+i @ contentScript.js:2
+Promise.then
+ca @ contentScript.js:2
+i @ contentScript.js:2
+(anonymous) @ contentScript.js:2
+(anonymous) @ contentScript.js:2
+(anonymous) @ contentScript.js:2
+supabaseAuth.ts:89 🔍 Attempting Supabase login for: ljohns1119@gmail.com
+supabaseAuth.ts:42 ✅ Supabase auth state changed: user logged in ljohns1119@gmail.com
+supabaseAuth.ts:101 ✅ Supabase login successful: ljohns1119@gmail.com
+supabaseAuth.ts:102 🔑 Access token available: true
+auth-page.tsx:75 🔄 Triggering data refresh after login...
+useDataRefresh.ts:67 🔄 Triggering comprehensive data refresh...
+auth-page.tsx:79 🔄 Navigating to dashboard after login...
+useDataRefresh.ts:28 🔄 Making authenticated API request to /api/refresh-all-data
+supabaseAuth.ts:145 🔍 API request to: /api/refresh-all-data
+supabaseAuth.ts:146 🔍 Request method: POST
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/refresh-all-data
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+App.tsx:18 🔍 Router state: {isLoading: false, isAuthenticated: true, user: 'ljohns1119@gmail.com'}
+options-chain.tsx:23 🔄 OptionsChainComponent rendered - dashboardExpiration: , symbol: , isOpen: false
+supabaseAuth.ts:145 🔍 API request to: /api/available-expirations
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/available-expirations
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+supabaseAuth.ts:145 🔍 API request to: /api/alerts
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/alerts
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+supabaseAuth.ts:145 🔍 API request to: /api/recommendations
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/recommendations
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+useRealtimeDataV3.ts:59 🔌 WebSocket: Connecting to wss://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/websocket-v4-cache-bypass?token=be5aeaeb-f665-44f6-9ef8-7a18df7f1ad5
+dashboard.tsx:179 📅 Dashboard default expiration: Today is Wed Sep 24 2025 (day 3), next Friday: 2025-09-26 (Fri Sep 26 2025)
+dashboard.tsx:187 📅 Dashboard selectedExpiration changed to: 
+supabaseAuth.ts:145 🔍 API request to: /api/tickers
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/tickers
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+dashboard.tsx:390 🔄 Dashboard: Refetch function changed
+supabaseAuth.ts:145 🔍 API request to: /api/portfolio/summary
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/portfolio/summary
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+supabaseAuth.ts:145 🔍 API request to: /api/stock-api/status
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/stock-api/status
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+supabaseAuth.ts:145 🔍 API request to: /api/schwab/status
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/schwab/status
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+useAuth.ts:17 🔍 Initial auth check: {hasUser: true, hasToken: true, userEmail: 'ljohns1119@gmail.com'}
+useAuth.ts:25 🔄 Found existing session, pre-populating auth cache
+useAuth.ts:17 🔍 Initial auth check: {hasUser: true, hasToken: true, userEmail: 'ljohns1119@gmail.com'}
+useAuth.ts:25 🔄 Found existing session, pre-populating auth cache
+options-chain.tsx:23 🔄 OptionsChainComponent rendered - dashboardExpiration: 2025-09-26, symbol: , isOpen: false
+dashboard.tsx:187 📅 Dashboard selectedExpiration changed to: 2025-09-26
+App.tsx:18 🔍 Router state: {isLoading: false, isAuthenticated: true, user: 'ljohns1119@gmail.com'}
+options-chain.tsx:23 🔄 OptionsChainComponent rendered - dashboardExpiration: 2025-09-26, symbol: , isOpen: false
+supabaseAuth.ts:162  POST https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/refresh-all-data 429 (Too Many Requests)
+apiRequestWithAuth @ supabaseAuth.ts:162
+mutationFn @ useDataRefresh.ts:29
+fn @ @tanstack_react-query.js?v=a3296f3f:1189
+run @ @tanstack_react-query.js?v=a3296f3f:494
+start @ @tanstack_react-query.js?v=a3296f3f:536
+execute @ @tanstack_react-query.js?v=a3296f3f:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+refreshAllData @ useDataRefresh.ts:68
+onSuccess @ auth-page.tsx:76
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: {content-length: '103', content-type: 'application/json; charset=utf-8', date: 'Wed, 24 Sep 2025 22:33:27 GMT', etag: 'W/"67-7WPk7jWTZPGocQd9qR/z3+vN8Ak"', replit-cluster: 'worf', …}
+supabaseAuth.ts:162  GET https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/available-expirations 429 (Too Many Requests)
+apiRequestWithAuth @ supabaseAuth.ts:162
+(anonymous) @ queryClient.ts:34
+fetchFn @ @tanstack_react-query.js?v=a3296f3f:840
+run @ @tanstack_react-query.js?v=a3296f3f:494
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+executeFetch_fn @ @tanstack_react-query.js?v=a3296f3f:2211
+onSubscribe @ @tanstack_react-query.js?v=a3296f3f:1898
+subscribe @ @tanstack_react-query.js?v=a3296f3f:24
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3022
+subscribeToStore @ chunk-276SZO74.js?v=a3296f3f:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=a3296f3f:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a3296f3f:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a3296f3f:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a3296f3f:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a3296f3f:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a3296f3f:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a3296f3f:19447
+commitRootImpl @ chunk-276SZO74.js?v=a3296f3f:19416
+commitRoot @ chunk-276SZO74.js?v=a3296f3f:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a3296f3f:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a3296f3f:9119
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=a3296f3f:555
+flush @ @tanstack_react-query.js?v=a3296f3f:569
+batch @ @tanstack_react-query.js?v=a3296f3f:587
+dispatch_fn @ @tanstack_react-query.js?v=a3296f3f:996
+setData @ @tanstack_react-query.js?v=a3296f3f:696
+setQueryData @ @tanstack_react-query.js?v=a3296f3f:1661
+onSuccess @ auth-page.tsx:65
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: {content-length: '103', content-type: 'application/json; charset=utf-8', date: 'Wed, 24 Sep 2025 22:33:27 GMT', etag: 'W/"67-7WPk7jWTZPGocQd9qR/z3+vN8Ak"', replit-cluster: 'worf', …}
+supabaseAuth.ts:162  GET https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/recommendations 429 (Too Many Requests)
+apiRequestWithAuth @ supabaseAuth.ts:162
+(anonymous) @ queryClient.ts:34
+fetchFn @ @tanstack_react-query.js?v=a3296f3f:840
+run @ @tanstack_react-query.js?v=a3296f3f:494
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+executeFetch_fn @ @tanstack_react-query.js?v=a3296f3f:2211
+onSubscribe @ @tanstack_react-query.js?v=a3296f3f:1898
+subscribe @ @tanstack_react-query.js?v=a3296f3f:24
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3022
+subscribeToStore @ chunk-276SZO74.js?v=a3296f3f:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=a3296f3f:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a3296f3f:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a3296f3f:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a3296f3f:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a3296f3f:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a3296f3f:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a3296f3f:19447
+commitRootImpl @ chunk-276SZO74.js?v=a3296f3f:19416
+commitRoot @ chunk-276SZO74.js?v=a3296f3f:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a3296f3f:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a3296f3f:9119
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=a3296f3f:555
+flush @ @tanstack_react-query.js?v=a3296f3f:569
+batch @ @tanstack_react-query.js?v=a3296f3f:587
+dispatch_fn @ @tanstack_react-query.js?v=a3296f3f:996
+setData @ @tanstack_react-query.js?v=a3296f3f:696
+setQueryData @ @tanstack_react-query.js?v=a3296f3f:1661
+onSuccess @ auth-page.tsx:65
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: {content-length: '103', content-type: 'application/json; charset=utf-8', date: 'Wed, 24 Sep 2025 22:33:27 GMT', etag: 'W/"67-7WPk7jWTZPGocQd9qR/z3+vN8Ak"', replit-cluster: 'worf', …}
+supabaseAuth.ts:162  GET https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/alerts 429 (Too Many Requests)
+apiRequestWithAuth @ supabaseAuth.ts:162
+(anonymous) @ queryClient.ts:34
+fetchFn @ @tanstack_react-query.js?v=a3296f3f:840
+run @ @tanstack_react-query.js?v=a3296f3f:494
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+executeFetch_fn @ @tanstack_react-query.js?v=a3296f3f:2211
+onSubscribe @ @tanstack_react-query.js?v=a3296f3f:1898
+subscribe @ @tanstack_react-query.js?v=a3296f3f:24
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3022
+subscribeToStore @ chunk-276SZO74.js?v=a3296f3f:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=a3296f3f:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a3296f3f:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a3296f3f:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a3296f3f:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a3296f3f:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a3296f3f:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a3296f3f:19447
+commitRootImpl @ chunk-276SZO74.js?v=a3296f3f:19416
+commitRoot @ chunk-276SZO74.js?v=a3296f3f:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a3296f3f:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a3296f3f:9119
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=a3296f3f:555
+flush @ @tanstack_react-query.js?v=a3296f3f:569
+batch @ @tanstack_react-query.js?v=a3296f3f:587
+dispatch_fn @ @tanstack_react-query.js?v=a3296f3f:996
+setData @ @tanstack_react-query.js?v=a3296f3f:696
+setQueryData @ @tanstack_react-query.js?v=a3296f3f:1661
+onSuccess @ auth-page.tsx:65
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: {content-length: '103', content-type: 'application/json; charset=utf-8', date: 'Wed, 24 Sep 2025 22:33:27 GMT', etag: 'W/"67-7WPk7jWTZPGocQd9qR/z3+vN8Ak"', replit-cluster: 'worf', …}
+supabaseAuth.ts:162  GET https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/tickers 429 (Too Many Requests)
+apiRequestWithAuth @ supabaseAuth.ts:162
+(anonymous) @ queryClient.ts:34
+fetchFn @ @tanstack_react-query.js?v=a3296f3f:840
+run @ @tanstack_react-query.js?v=a3296f3f:494
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+executeFetch_fn @ @tanstack_react-query.js?v=a3296f3f:2211
+onSubscribe @ @tanstack_react-query.js?v=a3296f3f:1898
+subscribe @ @tanstack_react-query.js?v=a3296f3f:24
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3022
+subscribeToStore @ chunk-276SZO74.js?v=a3296f3f:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=a3296f3f:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a3296f3f:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a3296f3f:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a3296f3f:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a3296f3f:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a3296f3f:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a3296f3f:19447
+commitRootImpl @ chunk-276SZO74.js?v=a3296f3f:19416
+commitRoot @ chunk-276SZO74.js?v=a3296f3f:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a3296f3f:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a3296f3f:9119
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=a3296f3f:555
+flush @ @tanstack_react-query.js?v=a3296f3f:569
+batch @ @tanstack_react-query.js?v=a3296f3f:587
+dispatch_fn @ @tanstack_react-query.js?v=a3296f3f:996
+setData @ @tanstack_react-query.js?v=a3296f3f:696
+setQueryData @ @tanstack_react-query.js?v=a3296f3f:1661
+onSuccess @ auth-page.tsx:65
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: {content-length: '103', content-type: 'application/json; charset=utf-8', date: 'Wed, 24 Sep 2025 22:33:27 GMT', etag: 'W/"67-7WPk7jWTZPGocQd9qR/z3+vN8Ak"', replit-cluster: 'worf', …}
+supabaseAuth.ts:162  GET https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/portfolio/summary 429 (Too Many Requests)
+apiRequestWithAuth @ supabaseAuth.ts:162
+(anonymous) @ queryClient.ts:34
+fetchFn @ @tanstack_react-query.js?v=a3296f3f:840
+run @ @tanstack_react-query.js?v=a3296f3f:494
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+executeFetch_fn @ @tanstack_react-query.js?v=a3296f3f:2211
+onSubscribe @ @tanstack_react-query.js?v=a3296f3f:1898
+subscribe @ @tanstack_react-query.js?v=a3296f3f:24
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3022
+subscribeToStore @ chunk-276SZO74.js?v=a3296f3f:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=a3296f3f:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a3296f3f:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a3296f3f:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a3296f3f:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a3296f3f:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a3296f3f:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a3296f3f:19447
+commitRootImpl @ chunk-276SZO74.js?v=a3296f3f:19416
+commitRoot @ chunk-276SZO74.js?v=a3296f3f:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a3296f3f:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a3296f3f:9119
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=a3296f3f:555
+flush @ @tanstack_react-query.js?v=a3296f3f:569
+batch @ @tanstack_react-query.js?v=a3296f3f:587
+dispatch_fn @ @tanstack_react-query.js?v=a3296f3f:996
+setData @ @tanstack_react-query.js?v=a3296f3f:696
+setQueryData @ @tanstack_react-query.js?v=a3296f3f:1661
+onSuccess @ auth-page.tsx:65
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: {content-length: '103', content-type: 'application/json; charset=utf-8', date: 'Wed, 24 Sep 2025 22:33:27 GMT', etag: 'W/"67-7WPk7jWTZPGocQd9qR/z3+vN8Ak"', replit-cluster: 'worf', …}
+useDataRefresh.ts:56 ❌ Data refresh failed: Error: API Error: 429 {"error":"Too Many Requests","message":"Rate limit exceeded. Try again in 53 seconds.","retryAfter":53}
+    at apiRequestWithAuth (supabaseAuth.ts:195:11)
+    at async Object.mutationFn (useDataRefresh.ts:29:14)
+onError @ useDataRefresh.ts:56
+execute @ @tanstack_react-query.js?v=a3296f3f:1254
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+refreshAllData @ useDataRefresh.ts:68
+onSuccess @ auth-page.tsx:76
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:506
+Promise.catch
+run @ @tanstack_react-query.js?v=a3296f3f:498
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+executeFetch_fn @ @tanstack_react-query.js?v=a3296f3f:2211
+onSubscribe @ @tanstack_react-query.js?v=a3296f3f:1898
+subscribe @ @tanstack_react-query.js?v=a3296f3f:24
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3022
+subscribeToStore @ chunk-276SZO74.js?v=a3296f3f:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=a3296f3f:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a3296f3f:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a3296f3f:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a3296f3f:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a3296f3f:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a3296f3f:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a3296f3f:19447
+commitRootImpl @ chunk-276SZO74.js?v=a3296f3f:19416
+commitRoot @ chunk-276SZO74.js?v=a3296f3f:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a3296f3f:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a3296f3f:9119
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=a3296f3f:555
+flush @ @tanstack_react-query.js?v=a3296f3f:569
+batch @ @tanstack_react-query.js?v=a3296f3f:587
+dispatch_fn @ @tanstack_react-query.js?v=a3296f3f:996
+setData @ @tanstack_react-query.js?v=a3296f3f:696
+setQueryData @ @tanstack_react-query.js?v=a3296f3f:1661
+onSuccess @ auth-page.tsx:65
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+options-chain.tsx:23 🔄 OptionsChainComponent rendered - dashboardExpiration: 2025-09-26, symbol: , isOpen: false
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:506
+Promise.catch
+run @ @tanstack_react-query.js?v=a3296f3f:498
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+executeFetch_fn @ @tanstack_react-query.js?v=a3296f3f:2211
+onSubscribe @ @tanstack_react-query.js?v=a3296f3f:1898
+subscribe @ @tanstack_react-query.js?v=a3296f3f:24
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3022
+subscribeToStore @ chunk-276SZO74.js?v=a3296f3f:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=a3296f3f:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a3296f3f:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a3296f3f:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a3296f3f:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a3296f3f:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a3296f3f:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a3296f3f:19447
+commitRootImpl @ chunk-276SZO74.js?v=a3296f3f:19416
+commitRoot @ chunk-276SZO74.js?v=a3296f3f:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a3296f3f:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a3296f3f:9119
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=a3296f3f:555
+flush @ @tanstack_react-query.js?v=a3296f3f:569
+batch @ @tanstack_react-query.js?v=a3296f3f:587
+dispatch_fn @ @tanstack_react-query.js?v=a3296f3f:996
+setData @ @tanstack_react-query.js?v=a3296f3f:696
+setQueryData @ @tanstack_react-query.js?v=a3296f3f:1661
+onSuccess @ auth-page.tsx:65
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:506
+Promise.catch
+run @ @tanstack_react-query.js?v=a3296f3f:498
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+executeFetch_fn @ @tanstack_react-query.js?v=a3296f3f:2211
+onSubscribe @ @tanstack_react-query.js?v=a3296f3f:1898
+subscribe @ @tanstack_react-query.js?v=a3296f3f:24
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3022
+subscribeToStore @ chunk-276SZO74.js?v=a3296f3f:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=a3296f3f:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a3296f3f:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a3296f3f:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a3296f3f:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a3296f3f:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a3296f3f:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a3296f3f:19447
+commitRootImpl @ chunk-276SZO74.js?v=a3296f3f:19416
+commitRoot @ chunk-276SZO74.js?v=a3296f3f:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a3296f3f:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a3296f3f:9119
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=a3296f3f:555
+flush @ @tanstack_react-query.js?v=a3296f3f:569
+batch @ @tanstack_react-query.js?v=a3296f3f:587
+dispatch_fn @ @tanstack_react-query.js?v=a3296f3f:996
+setData @ @tanstack_react-query.js?v=a3296f3f:696
+setQueryData @ @tanstack_react-query.js?v=a3296f3f:1661
+onSuccess @ auth-page.tsx:65
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+supabaseAuth.ts:173 🔍 Ticker API Response: {"error":"Too Many Requests","message":"Rate limit exceeded. Try again in 53 seconds.","retryAfter":53}
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:506
+Promise.catch
+run @ @tanstack_react-query.js?v=a3296f3f:498
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+executeFetch_fn @ @tanstack_react-query.js?v=a3296f3f:2211
+onSubscribe @ @tanstack_react-query.js?v=a3296f3f:1898
+subscribe @ @tanstack_react-query.js?v=a3296f3f:24
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3022
+subscribeToStore @ chunk-276SZO74.js?v=a3296f3f:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=a3296f3f:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a3296f3f:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a3296f3f:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a3296f3f:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a3296f3f:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a3296f3f:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a3296f3f:19447
+commitRootImpl @ chunk-276SZO74.js?v=a3296f3f:19416
+commitRoot @ chunk-276SZO74.js?v=a3296f3f:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a3296f3f:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a3296f3f:9119
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=a3296f3f:555
+flush @ @tanstack_react-query.js?v=a3296f3f:569
+batch @ @tanstack_react-query.js?v=a3296f3f:587
+dispatch_fn @ @tanstack_react-query.js?v=a3296f3f:996
+setData @ @tanstack_react-query.js?v=a3296f3f:696
+setQueryData @ @tanstack_react-query.js?v=a3296f3f:1661
+onSuccess @ auth-page.tsx:65
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:506
+Promise.catch
+run @ @tanstack_react-query.js?v=a3296f3f:498
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+executeFetch_fn @ @tanstack_react-query.js?v=a3296f3f:2211
+onSubscribe @ @tanstack_react-query.js?v=a3296f3f:1898
+subscribe @ @tanstack_react-query.js?v=a3296f3f:24
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3022
+subscribeToStore @ chunk-276SZO74.js?v=a3296f3f:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=a3296f3f:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a3296f3f:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a3296f3f:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a3296f3f:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a3296f3f:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a3296f3f:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a3296f3f:19447
+commitRootImpl @ chunk-276SZO74.js?v=a3296f3f:19416
+commitRoot @ chunk-276SZO74.js?v=a3296f3f:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a3296f3f:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a3296f3f:9119
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=a3296f3f:555
+flush @ @tanstack_react-query.js?v=a3296f3f:569
+batch @ @tanstack_react-query.js?v=a3296f3f:587
+dispatch_fn @ @tanstack_react-query.js?v=a3296f3f:996
+setData @ @tanstack_react-query.js?v=a3296f3f:696
+setQueryData @ @tanstack_react-query.js?v=a3296f3f:1661
+onSuccess @ auth-page.tsx:65
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+options-chain.tsx:23 🔄 OptionsChainComponent rendered - dashboardExpiration: 2025-09-26, symbol: , isOpen: false
+supabaseAuth.ts:162  GET https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/stock-api/status 429 (Too Many Requests)
+apiRequestWithAuth @ supabaseAuth.ts:162
+(anonymous) @ queryClient.ts:34
+fetchFn @ @tanstack_react-query.js?v=a3296f3f:840
+run @ @tanstack_react-query.js?v=a3296f3f:494
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+executeFetch_fn @ @tanstack_react-query.js?v=a3296f3f:2211
+onSubscribe @ @tanstack_react-query.js?v=a3296f3f:1898
+subscribe @ @tanstack_react-query.js?v=a3296f3f:24
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3022
+subscribeToStore @ chunk-276SZO74.js?v=a3296f3f:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=a3296f3f:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a3296f3f:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a3296f3f:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a3296f3f:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a3296f3f:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a3296f3f:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a3296f3f:19447
+commitRootImpl @ chunk-276SZO74.js?v=a3296f3f:19416
+commitRoot @ chunk-276SZO74.js?v=a3296f3f:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a3296f3f:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a3296f3f:9119
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=a3296f3f:555
+flush @ @tanstack_react-query.js?v=a3296f3f:569
+batch @ @tanstack_react-query.js?v=a3296f3f:587
+dispatch_fn @ @tanstack_react-query.js?v=a3296f3f:996
+setData @ @tanstack_react-query.js?v=a3296f3f:696
+setQueryData @ @tanstack_react-query.js?v=a3296f3f:1661
+onSuccess @ auth-page.tsx:65
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: {content-length: '103', content-type: 'application/json; charset=utf-8', date: 'Wed, 24 Sep 2025 22:33:27 GMT', etag: 'W/"67-7WPk7jWTZPGocQd9qR/z3+vN8Ak"', replit-cluster: 'worf', …}
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:506
+Promise.catch
+run @ @tanstack_react-query.js?v=a3296f3f:498
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+executeFetch_fn @ @tanstack_react-query.js?v=a3296f3f:2211
+onSubscribe @ @tanstack_react-query.js?v=a3296f3f:1898
+subscribe @ @tanstack_react-query.js?v=a3296f3f:24
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3022
+subscribeToStore @ chunk-276SZO74.js?v=a3296f3f:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=a3296f3f:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a3296f3f:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a3296f3f:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a3296f3f:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a3296f3f:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a3296f3f:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a3296f3f:19447
+commitRootImpl @ chunk-276SZO74.js?v=a3296f3f:19416
+commitRoot @ chunk-276SZO74.js?v=a3296f3f:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a3296f3f:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a3296f3f:9119
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=a3296f3f:555
+flush @ @tanstack_react-query.js?v=a3296f3f:569
+batch @ @tanstack_react-query.js?v=a3296f3f:587
+dispatch_fn @ @tanstack_react-query.js?v=a3296f3f:996
+setData @ @tanstack_react-query.js?v=a3296f3f:696
+setQueryData @ @tanstack_react-query.js?v=a3296f3f:1661
+onSuccess @ auth-page.tsx:65
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+supabaseAuth.ts:162  GET https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/schwab/status 429 (Too Many Requests)
+apiRequestWithAuth @ supabaseAuth.ts:162
+(anonymous) @ queryClient.ts:34
+fetchFn @ @tanstack_react-query.js?v=a3296f3f:840
+run @ @tanstack_react-query.js?v=a3296f3f:494
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+executeFetch_fn @ @tanstack_react-query.js?v=a3296f3f:2211
+onSubscribe @ @tanstack_react-query.js?v=a3296f3f:1898
+subscribe @ @tanstack_react-query.js?v=a3296f3f:24
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3022
+subscribeToStore @ chunk-276SZO74.js?v=a3296f3f:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=a3296f3f:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a3296f3f:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a3296f3f:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a3296f3f:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a3296f3f:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a3296f3f:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a3296f3f:19447
+commitRootImpl @ chunk-276SZO74.js?v=a3296f3f:19416
+commitRoot @ chunk-276SZO74.js?v=a3296f3f:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a3296f3f:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a3296f3f:9119
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=a3296f3f:555
+flush @ @tanstack_react-query.js?v=a3296f3f:569
+batch @ @tanstack_react-query.js?v=a3296f3f:587
+dispatch_fn @ @tanstack_react-query.js?v=a3296f3f:996
+setData @ @tanstack_react-query.js?v=a3296f3f:696
+setQueryData @ @tanstack_react-query.js?v=a3296f3f:1661
+onSuccess @ auth-page.tsx:65
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: {content-length: '103', content-type: 'application/json; charset=utf-8', date: 'Wed, 24 Sep 2025 22:33:27 GMT', etag: 'W/"67-7WPk7jWTZPGocQd9qR/z3+vN8Ak"', replit-cluster: 'worf', …}
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:506
+Promise.catch
+run @ @tanstack_react-query.js?v=a3296f3f:498
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+executeFetch_fn @ @tanstack_react-query.js?v=a3296f3f:2211
+onSubscribe @ @tanstack_react-query.js?v=a3296f3f:1898
+subscribe @ @tanstack_react-query.js?v=a3296f3f:24
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3022
+subscribeToStore @ chunk-276SZO74.js?v=a3296f3f:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=a3296f3f:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=a3296f3f:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=a3296f3f:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=a3296f3f:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=a3296f3f:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=a3296f3f:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=a3296f3f:19447
+commitRootImpl @ chunk-276SZO74.js?v=a3296f3f:19416
+commitRoot @ chunk-276SZO74.js?v=a3296f3f:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=a3296f3f:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=a3296f3f:9119
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=a3296f3f:555
+flush @ @tanstack_react-query.js?v=a3296f3f:569
+batch @ @tanstack_react-query.js?v=a3296f3f:587
+dispatch_fn @ @tanstack_react-query.js?v=a3296f3f:996
+setData @ @tanstack_react-query.js?v=a3296f3f:696
+setQueryData @ @tanstack_react-query.js?v=a3296f3f:1661
+onSuccess @ auth-page.tsx:65
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+useRealtimeDataV3.ts:64 ✅ WebSocket: Connected successfully
+options-chain.tsx:23 🔄 OptionsChainComponent rendered - dashboardExpiration: 2025-09-26, symbol: , isOpen: false
+dashboard.tsx:309 🔄 Dashboard mounted - triggering automatic data refresh for testing
+useRealtimeDataV3.ts:80 📨 WebSocket: Received message authenticated
+useRealtimeDataV3.ts:84 🔐 WebSocket: Authenticated successfully
+useRealtimeDataV3.ts:80 📨 WebSocket: Received message initial_data
+useRealtimeDataV3.ts:87 📊 WebSocket: Received initial data
+supabaseAuth.ts:145 🔍 API request to: /api/auth/user
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/auth/user
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+supabaseAuth.ts:162  GET https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/auth/user 429 (Too Many Requests)
+apiRequestWithAuth @ supabaseAuth.ts:162
+queryFn @ useAuth.ts:62
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=a3296f3f:840
+run @ @tanstack_react-query.js?v=a3296f3f:494
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1726
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1725
+batch @ @tanstack_react-query.js?v=a3296f3f:583
+refetchQueries @ @tanstack_react-query.js?v=a3296f3f:1724
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1716
+batch @ @tanstack_react-query.js?v=a3296f3f:583
+invalidateQueries @ @tanstack_react-query.js?v=a3296f3f:1705
+(anonymous) @ auth-page.tsx:85
+setTimeout
+onSuccess @ auth-page.tsx:83
+execute @ @tanstack_react-query.js?v=a3296f3f:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=a3296f3f:2630
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:3295
+handleLogin @ auth-page.tsx:146
+callCallback2 @ chunk-276SZO74.js?v=a3296f3f:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=a3296f3f:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=a3296f3f:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=a3296f3f:3736
+executeDispatch @ chunk-276SZO74.js?v=a3296f3f:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=a3296f3f:7034
+processDispatchQueue @ chunk-276SZO74.js?v=a3296f3f:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=a3296f3f:7051
+(anonymous) @ chunk-276SZO74.js?v=a3296f3f:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=a3296f3f:18913
+batchedUpdates @ chunk-276SZO74.js?v=a3296f3f:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=a3296f3f:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=a3296f3f:5478
+dispatchEvent @ chunk-276SZO74.js?v=a3296f3f:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=a3296f3f:5449
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: {content-length: '103', content-type: 'application/json; charset=utf-8', date: 'Wed, 24 Sep 2025 22:33:28 GMT', etag: 'W/"67-RQ4fCOgtEfjAPSpOEwQCOplGtSQ"', replit-cluster: 'worf', …}
+useAuth.ts:66 ❌ Supabase auth failed: Error: API Error: 429 {"error":"Too Many Requests","message":"Rate limit exceeded. Try again in 52 seconds.","retryAfter":52}
+    at apiRequestWithAuth (supabaseAuth.ts:195:11)
+    at async queryFn (useAuth.ts:62:26)
+App.tsx:18 🔍 Router state: {isLoading: false, isAuthenticated: false, user: undefined}
+useRealtimeDataV3.ts:154 🔌 WebSocket: Connection closed 1000 Manual disconnect
+useRealtimeDataV3.ts:31 🔄 WebSocket: Debounced cache invalidation executing...
+supabaseAuth.ts:145 🔍 API request to: /api/tickers
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/tickers
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+supabaseAuth.ts:145 🔍 API request to: /api/portfolio/summary
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/portfolio/summary
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+supabaseAuth.ts:162  GET https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/portfolio/summary 429 (Too Many Requests)
+apiRequestWithAuth @ supabaseAuth.ts:162
+(anonymous) @ queryClient.ts:34
+fetchFn @ @tanstack_react-query.js?v=a3296f3f:840
+run @ @tanstack_react-query.js?v=a3296f3f:494
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1726
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1725
+batch @ @tanstack_react-query.js?v=a3296f3f:583
+refetchQueries @ @tanstack_react-query.js?v=a3296f3f:1724
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1716
+batch @ @tanstack_react-query.js?v=a3296f3f:583
+invalidateQueries @ @tanstack_react-query.js?v=a3296f3f:1705
+(anonymous) @ useRealtimeDataV3.ts:37
+setTimeout
+(anonymous) @ useRealtimeDataV3.ts:30
+wsRef.current.onmessage @ useRealtimeDataV3.ts:89
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: {content-length: '103', content-type: 'application/json; charset=utf-8', date: 'Wed, 24 Sep 2025 22:33:30 GMT', etag: 'W/"67-hIRaNirbtLzp7vRX6+G1eyuOEw8"', replit-cluster: 'worf', …}
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:506
+Promise.catch
+run @ @tanstack_react-query.js?v=a3296f3f:498
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1726
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1725
+batch @ @tanstack_react-query.js?v=a3296f3f:583
+refetchQueries @ @tanstack_react-query.js?v=a3296f3f:1724
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1716
+batch @ @tanstack_react-query.js?v=a3296f3f:583
+invalidateQueries @ @tanstack_react-query.js?v=a3296f3f:1705
+(anonymous) @ useRealtimeDataV3.ts:37
+setTimeout
+(anonymous) @ useRealtimeDataV3.ts:30
+wsRef.current.onmessage @ useRealtimeDataV3.ts:89
+supabaseAuth.ts:162  GET https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/tickers 429 (Too Many Requests)
+apiRequestWithAuth @ supabaseAuth.ts:162
+(anonymous) @ queryClient.ts:34
+fetchFn @ @tanstack_react-query.js?v=a3296f3f:840
+run @ @tanstack_react-query.js?v=a3296f3f:494
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1726
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1725
+batch @ @tanstack_react-query.js?v=a3296f3f:583
+refetchQueries @ @tanstack_react-query.js?v=a3296f3f:1724
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1716
+batch @ @tanstack_react-query.js?v=a3296f3f:583
+invalidateQueries @ @tanstack_react-query.js?v=a3296f3f:1705
+(anonymous) @ useRealtimeDataV3.ts:33
+setTimeout
+(anonymous) @ useRealtimeDataV3.ts:30
+wsRef.current.onmessage @ useRealtimeDataV3.ts:89
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: {content-length: '103', content-type: 'application/json; charset=utf-8', date: 'Wed, 24 Sep 2025 22:33:30 GMT', etag: 'W/"67-hIRaNirbtLzp7vRX6+G1eyuOEw8"', replit-cluster: 'worf', …}
+supabaseAuth.ts:173 🔍 Ticker API Response: {"error":"Too Many Requests","message":"Rate limit exceeded. Try again in 50 seconds.","retryAfter":50}
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:506
+Promise.catch
+run @ @tanstack_react-query.js?v=a3296f3f:498
+start @ @tanstack_react-query.js?v=a3296f3f:536
+fetch @ @tanstack_react-query.js?v=a3296f3f:926
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1726
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1725
+batch @ @tanstack_react-query.js?v=a3296f3f:583
+refetchQueries @ @tanstack_react-query.js?v=a3296f3f:1724
+(anonymous) @ @tanstack_react-query.js?v=a3296f3f:1716
+batch @ @tanstack_react-query.js?v=a3296f3f:583
+invalidateQueries @ @tanstack_react-query.js?v=a3296f3f:1705
+(anonymous) @ useRealtimeDataV3.ts:33
+setTimeout
+(anonymous) @ useRealtimeDataV3.ts:30
+wsRef.current.onmessage @ useRealtimeDataV3.ts:89

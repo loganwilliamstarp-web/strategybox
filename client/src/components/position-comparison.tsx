@@ -31,6 +31,10 @@ export function PositionComparisonComponent({ isOpen, onClose }: PositionCompari
   const { data: tickers, isLoading } = useQuery<TickerWithPosition[]>({
     queryKey: ["/api/tickers"],
     enabled: isOpen,
+    refetchInterval: false, // Never auto-refetch - use WebSocket updates
+    staleTime: 60 * 1000, // Consider data fresh for 60 seconds to prevent spam
+    gcTime: 5 * 60 * 1000, // Keep cached for 5 minutes
+    refetchOnWindowFocus: false, // Disable aggressive refetching
   });
 
   if (!isOpen) return null;
