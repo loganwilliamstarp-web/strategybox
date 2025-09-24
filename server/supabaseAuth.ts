@@ -9,9 +9,18 @@ export function setupSupabaseAuth(app: Express) {
   // Middleware to verify Supabase JWT tokens
   app.use(async (req, res, next) => {
     try {
+      // Debug POST requests specifically
+      if (req.method === 'POST' && req.path === '/api/tickers') {
+        console.log(`🚨 AUTH MIDDLEWARE: POST /api/tickers hit! Headers:`, req.headers.authorization ? 'Bearer token present' : 'No auth header');
+        console.log(`🚨 AUTH MIDDLEWARE: Request body:`, req.body);
+      }
+      
       // Get the Authorization header
       const authHeader = req.headers.authorization;
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        if (req.method === 'POST' && req.path === '/api/tickers') {
+          console.log(`❌ AUTH MIDDLEWARE: No auth header for POST /api/tickers`);
+        }
         return next(); // No auth header, continue without user
       }
 
@@ -34,6 +43,18 @@ export function setupSupabaseAuth(app: Express) {
         createdAt: new Date(user.created_at),
         updatedAt: new Date(user.updated_at || user.created_at)
       };
+
+      // Ensure user record exists in local database for foreign key constraints
+      try {
+        await storage.createOrUpdateUser({
+          id: user.id,
+          email: user.email || '',
+          firstName: user.user_metadata?.first_name || '',
+          lastName: user.user_metadata?.last_name || '',
+        });
+      } catch (dbError) {
+        console.warn(`⚠️ Failed to ensure local user record: ${dbError}`);
+      }
 
       console.log(`✅ Supabase auth successful: ${req.user.email} (ID: ${req.user.id})`);
       next();
@@ -68,7 +89,18 @@ export function setupSupabaseAuth(app: Express) {
       const user = data.user;
       console.log(`✅ Supabase login successful: ${user.email} (ID: ${user.id})`);
 
-      // Return user data and access token
+      // Ensure local user exists (idempotent)
+      try {
+        await storage.createOrUpdateUser({
+          id: user.id,
+          email: user.email || '',
+          firstName: user.user_metadata?.first_name || '',
+          lastName: user.user_metadata?.last_name || '',
+        });
+      } catch (localError) {
+        console.warn(`⚠️ Failed to upsert local user during login:`, localError);
+      }
+
       res.json({
         id: user.id,
         email: user.email || '',
@@ -121,20 +153,17 @@ export function setupSupabaseAuth(app: Express) {
       const user = data.user;
       console.log(`✅ Supabase registration successful: ${user.email} (ID: ${user.id})`);
 
-      // Create user record in our database for additional data
+      // Create/Update user record in our database for additional data
       try {
-        await storage.createUser({
+        await storage.createOrUpdateUser({
           id: user.id,
           email: user.email || '',
           firstName,
           lastName,
-          password: '', // Supabase handles password hashing
-          createdAt: new Date(),
-          updatedAt: new Date()
         });
-        console.log(`✅ User record created in local database: ${user.id}`);
+        console.log(`✅ User record synchronized in local database: ${user.id}`);
       } catch (dbError) {
-        console.warn(`⚠️ Failed to create user record in local database: ${dbError}`);
+        console.warn(`⚠️ Failed to upsert user record in local database: ${dbError}`);
         // Don't fail registration if local DB creation fails
       }
 

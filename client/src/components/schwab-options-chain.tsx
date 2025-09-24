@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronUp, X, Search, RefreshCw } from "lucide-react";
+import { apiRequestWithAuth } from "@/lib/supabaseAuth";
 
 interface OptionsChainContract {
   optionSymbol: string;
@@ -64,14 +65,13 @@ export function SchwabOptionsChain({ symbol, isOpen, onClose, selectedExpiration
     
     setLoading(true);
     try {
-      const response = await fetch(`/api/market-data/options-chain/${symbol}`);
-      if (response.ok) {
-        const data = await response.json();
-        setOptionsData(data);
+      const chainData = await apiRequestWithAuth(`/api/market-data/options-chain/${symbol}`);
+      if (chainData) {
+        setOptionsData(chainData);
         
         // Set default expiration and expand it - use first expiration from 90-day range  
-        if (data.options.length > 0) {
-          const expirations = Array.from(new Set(data.options.map((opt: any) => opt.expiration_date))).sort() as string[];
+        if (chainData.options.length > 0) {
+          const expirations = Array.from(new Set(chainData.options.map((opt: any) => opt.expiration_date))).sort() as string[];
           console.log('📊 Available expirations:', expirations);
           
           if (expirations.length > 0) {

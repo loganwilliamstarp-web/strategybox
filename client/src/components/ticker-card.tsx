@@ -9,6 +9,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useCapacitor } from "@/hooks/useCapacitor";
 import { apiRequest } from "@/lib/queryClient";
+import { apiRequestWithAuth } from "@/lib/supabaseAuth";
 import { useState, useEffect, useRef, useMemo, memo } from "react";
 import { ImpactStyle } from "@capacitor/haptics";
 import type { TickerWithPosition } from "@shared/schema";
@@ -54,12 +55,9 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
   useEffect(() => {
     const fetchIndividualIV = async () => {
       try {
-        const response = await fetch(`/api/market-data/options-chain/${ticker.symbol}?expiration=${position.expirationDate}`, {
-          credentials: 'include'
-        });
+        const chainData = await apiRequestWithAuth(`/api/market-data/options-chain/${ticker.symbol}?expiration=${position.expirationDate}`);
         
-        if (response.ok) {
-          const chainData = await response.json();
+        if (chainData) {
           const expiration = position.expirationDate;
           
           if (chainData.chains && chainData.chains[expiration]) {

@@ -4,8 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import type { StrategyType } from "@shared/schema";
+import { apiRequestWithAuth } from "@/lib/supabaseAuth";
+import type { StrategyType, TickerWithPosition } from "@shared/schema";
 
 interface TickerSearchProps {
   strategyType?: StrategyType;
@@ -19,18 +19,48 @@ export function TickerSearch({ strategyType = 'long_strangle', expirationDate }:
 
   const addTickerMutation = useMutation({
     mutationFn: async (symbol: string) => {
-      return await apiRequest("/api/tickers", { 
-        method: "POST", 
-        data: { 
-          symbol,
-          strategyType,
-          expirationDate 
-        } 
-      });
+      console.log('🎯 Starting ticker creation for:', symbol);
+      
+      const payload = {
+        symbol,
+        strategyType,
+        expirationDate,
+      };
+      
+      console.log('📦 Ticker payload:', payload);
+
+      try {
+        const result = await apiRequestWithAuth("/api/tickers", { 
+          method: "POST", 
+          body: JSON.stringify(payload),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        console.log('✅ Ticker creation API response:', result);
+        return result;
+      } catch (error) {
+        console.error('❌ Ticker creation failed:', error);
+        throw error;
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
+    onSuccess: (newTicker: TickerWithPosition) => {
+      console.log('✅ Ticker created successfully:', newTicker);
+      
+      // Update cache immediately with new ticker
+      queryClient.setQueryData(["/api/tickers"], (current: TickerWithPosition[] | undefined) => {
+        const updated = current ? [...current, newTicker] : [newTicker];
+        console.log('📊 Updated ticker cache:', updated.map(t => t.symbol));
+        return updated;
+      });
+
+      // Delay invalidation to prevent immediate cache clearing
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
+      }, 2000); // Increased delay to ensure database commit
+      
       setSymbol("");
       
       // Track search activity for achievements
@@ -39,7 +69,7 @@ export function TickerSearch({ strategyType = 'long_strangle', expirationDate }:
       
       toast({
         title: "Success",
-        description: "Ticker added successfully",
+        description: `${newTicker.symbol} added successfully`,
       });
     },
     onError: (error: any) => {

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { setupAuth, requireAuth } from "./auth";
+import { setupSupabaseAuth, requireSupabaseAuth } from "./supabaseAuth";
 
 import { storage } from "./storage";
 import { addTickerSchema, StrategyType } from "@shared/schema";
@@ -240,14 +240,14 @@ async function getOptionsData(symbol: string, realTimePrice?: number): Promise<a
 
 export function registerRoutes(app: Express): Server {
   // Auth middleware
-  setupAuth(app);
+  setupSupabaseAuth(app);
   // Pass storage to app locals for use in routes
   app.locals.storage = storage;
 
-  // Auth routes are handled in setupAuth function
+  // Auth routes are handled in setupSupabaseAuth function
 
   // Get active tickers with their positions
-  app.get("/api/tickers", requireAuth, async (req: any, res) => {
+  app.get("/api/tickers", requireSupabaseAuth, async (req: any, res) => {
     console.log(`🚨 /api/tickers CALLED! User ID: ${req.user?.id}, Auth status: ${!!req.user}`);
     try {
       const userId = req.user.id;
@@ -340,113 +340,11 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add a new ticker
-  app.post("/api/tickers", requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { symbol } = addTickerSchema.parse(req.body);
-      
-      // Get strategy parameters from request body
-      const { strategyType = 'long_strangle', expirationDate = null } = req.body;
-      
-      // Check if ticker already exists for this user
-      const existingTicker = await storage.getTickerBySymbol(symbol, userId);
-      if (existingTicker) {
-        // If exists but inactive, activate it
-        if (!existingTicker.isActive) {
-          await storage.setTickerActive(symbol, true, userId);
-          const updatedTicker = await storage.getTickerBySymbol(symbol, userId);
-          const position = await storage.getPositionByTickerId(updatedTicker!.id);
-          res.json({ ...updatedTicker, position });
-        } else {
-          res.status(400).json({ message: "Ticker is already active" });
-        }
-        return;
-      }
-
-      // Try to get live data if API is configured
-      if (marketDataApiService.isConfigured()) {
-        try {
-          // Use MarketData.app for stock quotes only
-          const quote = await getStockQuote(symbol);
-          
-          if (!quote) {
-            throw new Error(`Failed to get stock quote for ${symbol}`);
-          }
-
-          const tickerData = {
-            userId: userId,
-            symbol: symbol.toUpperCase(), // Use request param symbol, not quote.symbol which may be null
-            companyName: symbol.toUpperCase(), // Use symbol as company name since we don't have profile data
-            currentPrice: quote.currentPrice,
-            priceChange: quote.change,
-            priceChangePercent: quote.changePercent,
-            earningsDate: null, // No earnings data from marketdata.app
-            isActive: true,
-          };
-
-          // Use unified options strategy calculator with Market Data API for real premiums
-          const { OptionsStrategyCalculator, LongStrangleCalculator } = await import('./positionCalculator');
-          
-          // Use MarketData.app for options data
-          const optionsChain = await getOptionsData(symbol);
-          if (!optionsChain) {
-            throw new Error(`No options data available for ${symbol} - cannot create position`);
-          }
-          
-          // Calculate position using the unified calculator with real market data
-          // Use the corrected expiration calculation
-          const nextExpiration = getNextOptionsExpiration();
-          
-          const positionData = await OptionsStrategyCalculator.calculatePosition({
-            strategyType: strategyType as StrategyType,
-            currentPrice: quote.currentPrice,
-            symbol: symbol,
-            optionsChain: optionsChain, // Pass the options chain from MarketData.app
-            daysToExpiry: nextExpiration.days, // Use corrected calculation
-            expirationDate: expirationDate || nextExpiration.date // Use calculated date when expirationDate is null
-          });
-
-          // Create the ticker
-          const ticker = await storage.createTicker(tickerData);
-          
-          // Create the options position
-          const position = await storage.createPosition({
-            ...positionData,
-            strategyType: strategyType as StrategyType,
-            longExpiration: expirationDate || positionData.expirationDate,
-            tickerId: ticker.id,
-          });
-
-          res.json({ ...ticker, position });
-          return;
-        } catch (apiError) {
-          console.error(`Live API failed for ${symbol}:`, apiError);
-          res.status(503).json({ 
-            message: "Market data temporarily unavailable. Please check your API configuration and try again.",
-            error: "live_data_required" 
-          });
-          return;
-        }
-      }
-
-      // No fallback - require live data only
-      res.status(503).json({ 
-        message: "Market data API not configured. Live data is required for all operations.",
-        error: "api_not_configured" 
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid ticker symbol" });
-      } else {
-        res.status(500).json({ message: "Failed to add ticker" });
-      }
-    }
-  });
+  // Duplicate POST /api/tickers route removed - now handled by registerTickerRoutes()
 
   // Remove a ticker completely for a user
   // Update position strikes
-  app.patch("/api/positions/:id", requireAuth, async (req: any, res) => {
+  app.patch("/api/positions/:id", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { id } = req.params;
@@ -560,7 +458,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Set custom strikes for a position
-  app.post("/api/positions/:id/custom-strikes", requireAuth, async (req: any, res) => {
+  app.post("/api/positions/:id/custom-strikes", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { id } = req.params;
@@ -642,7 +540,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Clear custom strikes for a position (revert to automatic calculation)
-  app.delete("/api/positions/:id/custom-strikes", requireAuth, async (req: any, res) => {
+  app.delete("/api/positions/:id/custom-strikes", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { id } = req.params;
@@ -703,7 +601,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.delete("/api/tickers/:symbol", requireAuth, async (req: any, res) => {
+  app.delete("/api/tickers/:symbol", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const symbol = req.params.symbol.toUpperCase();
@@ -729,7 +627,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Get portfolio summary
-  app.get("/api/portfolio/summary", requireAuth, async (req: any, res) => {
+  app.get("/api/portfolio/summary", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const summary = await storage.getPortfolioSummaryForUser(userId);
@@ -740,7 +638,7 @@ export function registerRoutes(app: Express): Server {
   });
 
   // DIRECT FIX: Update NVDA with exact market prices from user screenshot
-  app.post("/api/fix-nvda-direct", requireAuth, async (req: any, res) => {
+  app.post("/api/fix-nvda-direct", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       console.log("🎯 DIRECT NVDA FIX - Using exact market prices");
@@ -1037,7 +935,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
   });
 
   // Get volatility surface data for a symbol
-  app.get("/api/volatility-surface/:symbol", requireAuth, async (req: any, res) => {
+  app.get("/api/volatility-surface/:symbol", requireSupabaseAuth, async (req: any, res) => {
     try {
       const { symbol } = req.params;
       const userId = req.user.id;
@@ -1168,7 +1066,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
   });
 
   // Market Data API routes for real options data
-  app.get("/api/market-data/options-chain/:symbol", requireAuth, async (req: any, res) => {
+  app.get("/api/market-data/options-chain/:symbol", requireSupabaseAuth, async (req: any, res) => {
     try {
       const { symbol } = req.params;
       const { multipleExpirations = 'true' } = req.query; // Default to multiple expirations for UI
@@ -1321,7 +1219,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
   });
 
   // Get optimal strangle strikes with real market data
-  app.get("/api/market-data/optimal-strangle/:symbol", requireAuth, async (req: any, res) => {
+  app.get("/api/market-data/optimal-strangle/:symbol", requireSupabaseAuth, async (req: any, res) => {
     try {
       const symbol = req.params.symbol.toUpperCase();
       // Get current stock price using Finnhub
@@ -1383,7 +1281,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
 
   // DISABLED: Refresh earnings endpoint moved to refresh.ts with comprehensive IV updates
   /*
-  app.post("/api/tickers/refresh-earnings", requireAuth, async (req: any, res) => {
+  app.post("/api/tickers/refresh-earnings", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       console.log(`🔄 Refresh earnings called for user ${userId}`);
@@ -1551,7 +1449,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
   */
 
   // Options Chain routes
-  app.get("/api/options/:symbol", requireAuth, async (req: any, res) => {
+  app.get("/api/options/:symbol", requireSupabaseAuth, async (req: any, res) => {
     try {
       const { symbol } = req.params;
       const optionsChain = await storage.getOptionsChain(symbol.toUpperCase());
@@ -1562,7 +1460,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
   });
 
   // Calculate position with real market premiums
-  app.post("/api/position/calculate-with-real-premiums", requireAuth, async (req: any, res) => {
+  app.post("/api/position/calculate-with-real-premiums", requireSupabaseAuth, async (req: any, res) => {
     try {
       const { LongStrangleCalculator } = await import('./positionCalculator');
       const { symbol, currentPrice, putStrike, callStrike } = req.body;
@@ -1593,7 +1491,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
   });
 
   // Price Alert routes
-  app.get("/api/alerts", requireAuth, async (req: any, res) => {
+  app.get("/api/alerts", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const alerts = await storage.getPriceAlertsForUser(userId);
@@ -1603,7 +1501,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
     }
   });
 
-  app.post("/api/alerts", requireAuth, async (req: any, res) => {
+  app.post("/api/alerts", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { createPriceAlertSchema } = await import("@shared/schema");
@@ -1616,7 +1514,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
     }
   });
 
-  app.delete("/api/alerts/:id", requireAuth, async (req: any, res) => {
+  app.delete("/api/alerts/:id", requireSupabaseAuth, async (req: any, res) => {
     try {
       const { id } = req.params;
       await storage.deletePriceAlert(id);
@@ -1627,7 +1525,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
   });
 
   // Exit Recommendations routes
-  app.get("/api/recommendations", requireAuth, async (req: any, res) => {
+  app.get("/api/recommendations", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const recommendations = await storage.getExitRecommendationsForUser(userId);
@@ -1637,7 +1535,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
     }
   });
 
-  app.post("/api/recommendations/:id/dismiss", requireAuth, async (req: any, res) => {
+  app.post("/api/recommendations/:id/dismiss", requireSupabaseAuth, async (req: any, res) => {
     try {
       const { id } = req.params;
       await storage.dismissRecommendation(id);
@@ -1648,7 +1546,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
   });
 
   // Enhanced ticker route with alerts and recommendations
-  app.get("/api/tickers/enhanced", requireAuth, async (req: any, res) => {
+  app.get("/api/tickers/enhanced", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const tickersWithAlertsAndRecs = await storage.getActiveTickersWithAlertsAndRecsForUser(userId);
@@ -1659,7 +1557,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
   });
 
   // AI-powered exit recommendations generation endpoint
-  app.post("/api/recommendations/generate", requireAuth, async (req: any, res) => {
+  app.post("/api/recommendations/generate", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const tickers = await storage.getActiveTickersWithPositionsForUser(userId);
@@ -1764,7 +1662,7 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
   const httpServer = createServer(app);
   
   // Set up WebSocket server for real-time price streaming
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  const wss = new WebSocketServer({ server: httpServer, path: '/websocket-v3' });
   
   // Store active connections with user authentication
   const activeConnections = new Map<string, { ws: WebSocket, userId: string }>();

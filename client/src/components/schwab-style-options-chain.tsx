@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RefreshCw, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { apiRequestWithAuth } from '@/lib/supabaseAuth';
 
 interface OptionsChainContract {
   optionSymbol: string;
@@ -44,14 +45,13 @@ export const SchwabStyleOptionsChain: React.FC<SchwabStyleOptionsChainProps> = (
     
     setLoading(true);
     try {
-      const response = await fetch(`/api/market-data/options-chain/${symbol}`);
-      if (response.ok) {
-        const data = await response.json();
-        setOptionsData(data);
+      const chainData = await apiRequestWithAuth(`/api/market-data/options-chain/${symbol}`);
+      if (chainData) {
+        setOptionsData(chainData);
         
         // Set default expiration to first available
-        if (data.options.length > 0 && !selectedExpiration) {
-          const expirations = [...new Set(data.options.map((opt: OptionsChainContract) => opt.expiration))];
+        if (chainData.options.length > 0 && !selectedExpiration) {
+          const expirations = [...new Set(chainData.options.map((opt: OptionsChainContract) => opt.expiration))];
           setSelectedExpiration(expirations[0]);
         }
       }

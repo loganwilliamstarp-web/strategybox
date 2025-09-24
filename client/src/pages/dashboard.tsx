@@ -35,7 +35,7 @@ import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
-import { useRealtimeData } from "@/hooks/useRealtimeData";
+// import { useRealtimeDataV3 } from "@/hooks/useRealtimeDataV3"; // TEMPORARILY DISABLED
 import { useCapacitor } from "@/hooks/useCapacitor";
 import { getOptimalRefetchInterval, getMarketSession, getCurrentEasternTime } from "@/utils/marketHours";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -51,7 +51,8 @@ import type { TickerWithPosition, PortfolioSummary, StrategyType, strategyTypes 
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { isConnected: isRealtimeConnected, lastUpdate, updateCount } = useRealtimeData();
+  // const { isConnected: isRealtimeConnected } = useRealtimeDataV3(); // TEMPORARILY DISABLED
+  const isRealtimeConnected = false; // FORCE DISABLE WEBSOCKET
   const { isNative, triggerHaptics } = useCapacitor();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -153,41 +154,30 @@ export default function Dashboard() {
   
   // Set default expiration to next Friday (matching backend logic)
   useEffect(() => {
-    if (!selectedExpiration) {
-      const today = new Date();
-      const currentDay = today.getDay(); // 0=Sunday, 5=Friday
-      
-      // Calculate days until next valid Friday (never use today)
-      let daysUntilFriday;
-      if (currentDay < 5) {
-        // Monday-Thursday: Use this Friday
-        daysUntilFriday = 5 - currentDay;
-      } else if (currentDay === 5) {
-        // Friday: Always use next Friday (options expire at close)
-        daysUntilFriday = 7;
-      } else {
-        // Saturday-Sunday: Use next Friday
-        daysUntilFriday = 7 - currentDay + 5;
-      }
-      
-      // Ensure we never use today (minimum 1 day)
-      if (daysUntilFriday === 0) {
-        daysUntilFriday = 7;
-      }
-      
-      const nextFriday = new Date(today);
-      nextFriday.setDate(today.getDate() + daysUntilFriday);
-      
-      // Format as YYYY-MM-DD
-      const year = nextFriday.getFullYear();
-      const month = String(nextFriday.getMonth() + 1).padStart(2, '0');
-      const day = String(nextFriday.getDate()).padStart(2, '0');
-      const fridayDate = `${year}-${month}-${day}`;
-      
-      console.log(`📅 Dashboard default expiration: Today is ${today.toDateString()}, next Friday: ${fridayDate} (${nextFriday.toDateString()})`);
-      setSelectedExpiration(fridayDate);
+    if (selectedExpiration) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const day = today.getDay();
+
+    let daysUntilFriday: number;
+    if (day < 5) {
+      daysUntilFriday = 5 - day;
+    } else if (day === 5) {
+      daysUntilFriday = 7;
+    } else {
+      daysUntilFriday = 7 - day + 5;
     }
-  }, []); // Run only on mount
+
+    const nextFriday = new Date(today);
+    nextFriday.setDate(today.getDate() + Math.max(daysUntilFriday, 1));
+
+    const formatted = nextFriday.toISOString().split("T")[0];
+    console.log(
+      `📅 Dashboard default expiration: Today is ${today.toDateString()}, next Friday: ${formatted} (${nextFriday.toDateString()})`
+    );
+    setSelectedExpiration(formatted);
+  }, [selectedExpiration]);
 
   // Update existing tickers when strategy or expiration changes
   const handleStrategyChange = (newStrategy: StrategyType) => {
@@ -755,6 +745,7 @@ export default function Dashboard() {
                   <ExpirationSelector 
                     value={selectedExpiration}
                     onValueChange={handleExpirationChange}
+                    autoSelectFirst
                   />
                 </div>
               </div>

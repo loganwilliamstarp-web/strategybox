@@ -11,6 +11,22 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 let currentUser: any = null;
 let currentToken: string | null = null;
 
+// Initialize session on app startup
+(async () => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      currentUser = session.user;
+      currentToken = session.access_token;
+      console.log('🔄 Restored Supabase session on startup:', session.user.email);
+    } else {
+      console.log('🔄 No existing Supabase session found on startup');
+    }
+  } catch (error) {
+    console.error('❌ Failed to restore Supabase session:', error);
+  }
+})();
+
 // Listen for auth state changes
 supabase.auth.onAuthStateChange((event, session) => {
   if (session) {
@@ -93,6 +109,8 @@ export async function apiRequestWithAuth(url: string, options: RequestInit = {})
   const token = getAccessToken();
   
   console.log('🔍 API request to:', url);
+  console.log('🔍 Request method:', options.method || 'GET');
+  console.log('🔍 Full URL:', `${window.location.origin}${url}`);
   console.log('🔑 Token available:', !!token);
   
   const headers: HeadersInit = {
@@ -111,6 +129,9 @@ export async function apiRequestWithAuth(url: string, options: RequestInit = {})
     ...options,
     headers,
   });
+
+  console.log('🔍 Response status:', response.status);
+  console.log('🔍 Response headers:', Object.fromEntries(response.headers.entries()));
 
   if (!response.ok) {
     if (response.status === 401) {

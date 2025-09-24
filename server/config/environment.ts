@@ -3,7 +3,7 @@ import { z } from 'zod';
 // Environment schema validation
 const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
-  PORT: z.string().transform(val => parseInt(val, 10)).default('5000'),
+  PORT: z.string().transform(val => parseInt(val, 10)).default('5001'),
   
   // AWS Configuration
   AWS_REGION: z.string().default('us-east-1'),

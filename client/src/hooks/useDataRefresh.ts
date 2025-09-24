@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequestWithAuth } from "@/lib/supabaseAuth";
 
 interface RefreshResults {
   marketData: boolean;
@@ -24,20 +25,10 @@ export function useDataRefresh() {
 
   const refreshMutation = useMutation({
     mutationFn: async (): Promise<RefreshResponse> => {
-      const response = await fetch("/api/refresh-all-data", {
+      console.log('🔄 Making authenticated API request to /api/refresh-all-data');
+      return await apiRequestWithAuth("/api/refresh-all-data", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
       });
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Data refresh failed");
-      }
-
-      return await response.json();
     },
     onSuccess: (data) => {
       console.log("🔄 Data refresh completed:", data);

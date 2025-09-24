@@ -50,7 +50,7 @@ function calculateExpectedMove(currentPrice: number, impliedVolatility: number, 
 export function setupWebSocket(httpServer: Server): void {
   
   // Set up WebSocket server for real-time price streaming
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  const wss = new WebSocketServer({ server: httpServer, path: '/websocket-v4-cache-bypass' });
   
   // Track update intervals
   let priceUpdateInterval: NodeJS.Timeout | null = null;

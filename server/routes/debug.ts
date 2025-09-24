@@ -42,6 +42,34 @@ async function getHistoricalClosingPrice(symbol: string, date: string): Promise<
 }
 
 export function setupDebugRoutes(app: Express) {
+  
+  // Debug endpoint to check user's tickers in database
+  app.get("/api/debug/user-tickers/:userId", async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      console.log(`🔍 DEBUG: Checking tickers for user ${userId}`);
+      
+      const allTickers = await storage.getActiveTickersForUser(userId);
+      const tickersWithPositions = await storage.getActiveTickersWithPositionsForUser(userId);
+      
+      console.log(`📊 DEBUG: Found ${allTickers.length} active tickers`);
+      console.log(`📊 DEBUG: Found ${tickersWithPositions.length} tickers with positions`);
+      
+      res.json({
+        userId,
+        allTickers,
+        tickersWithPositions,
+        counts: {
+          allTickers: allTickers.length,
+          withPositions: tickersWithPositions.length
+        }
+      });
+    } catch (error) {
+      console.error('❌ Debug tickers error:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
   // Debug endpoint to see raw data (no auth for testing)
   app.get("/api/debug/tickers", async (req: any, res) => {
     try {

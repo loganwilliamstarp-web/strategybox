@@ -109,6 +109,13 @@ async function getStockQuote(symbol: string): Promise<{ currentPrice: number; ch
  * Register ticker-related routes
  */
 export function registerTickerRoutes(app: Express): void {
+  console.log('🔧 Registering ticker routes...');
+  
+  // Test route to verify registration
+  app.post("/api/tickers/test", (req, res) => {
+    console.log('🧪 TEST ROUTE HIT!');
+    res.json({ message: "Test route working" });
+  });
   
   // Get active tickers with their positions
   app.get("/api/tickers", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
@@ -121,6 +128,14 @@ export function registerTickerRoutes(app: Express): void {
       // Debug: Check what tickers exist for this user
       const allTickers = await storage.getActiveTickersForUser(userId);
       console.log(`📊 Found ${allTickers.length} active tickers for user ${userId}:`, allTickers.map(t => t.symbol));
+      
+      // Debug: Check if we can find any ticker by symbol for this user
+      try {
+        const testTicker = await storage.getTickerBySymbol('AAPL', userId);
+        console.log(`📊 DEBUG: AAPL ticker for user ${userId}:`, testTicker ? `Found: ${testTicker.symbol}, active: ${testTicker.isActive}, id: ${testTicker.id}` : 'Not found');
+      } catch (error) {
+        console.log(`📊 DEBUG: Error checking AAPL ticker:`, error);
+      }
       
       const tickers = await storage.getActiveTickersWithPositionsForUser(userId);
       
@@ -266,8 +281,34 @@ export function registerTickerRoutes(app: Express): void {
 
   // Add a new ticker (no rate limiting for normal user operations)
   app.post("/api/tickers", requireSupabaseAuth, async (req: any, res) => {
+    console.log(`🚨 POST /api/tickers ROUTE HIT! Body:`, req.body);
     try {
       const userId = req.user.id;
+      console.log(`🎯 POST /api/tickers called for user: ${userId}`);
+      
+      // Ensure user record exists before creating ticker
+      try {
+        const existingUser = await storage.getUser(userId);
+        if (!existingUser) {
+          console.log(`🔧 Creating user record for ticker creation: ${req.user.email}`);
+          await storage.createUser({
+            id: userId,
+            email: req.user.email,
+            firstName: req.user.firstName || '',
+            lastName: req.user.lastName || '',
+            password: '',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+          console.log(`✅ User record created for ticker creation: ${req.user.email}`);
+        }
+      } catch (userError: any) {
+        if (userError.code !== '23505') { // Ignore duplicate key errors
+          console.error('❌ Failed to ensure user record:', userError);
+          return res.status(500).json({ message: "User setup failed" });
+        }
+      }
+      
       const { symbol } = addTickerSchema.parse(req.body);
       
       // Get strategy parameters from request body
@@ -324,17 +365,27 @@ export function registerTickerRoutes(app: Express): void {
           });
 
           // Create the ticker
+          console.log(`🔧 Creating ticker for ${symbol} with data:`, tickerData);
           const ticker = await storage.createTicker(tickerData);
+          console.log(`✅ Ticker created successfully:`, ticker);
           
           // Create the options position
+          console.log(`🔧 Creating position for ticker ${ticker.id}:`, positionData);
           const position = await storage.createPosition({
             ...positionData,
             strategyType: strategyType as StrategyType,
             longExpiration: expirationDate || positionData.expirationDate,
             tickerId: ticker.id,
           });
+          console.log(`✅ Position created successfully:`, position);
 
-          res.json({ ...ticker, position });
+          // Verify ticker was saved by immediately querying it
+          const verifyTicker = await storage.getTickerBySymbol(symbol, userId);
+          console.log(`🔍 Verification: Ticker ${symbol} found:`, verifyTicker ? `ID: ${verifyTicker.id}, Active: ${verifyTicker.isActive}` : 'NOT FOUND');
+
+          const result = { ...ticker, position };
+          console.log(`🎯 Returning ticker with position:`, result);
+          res.json(result);
           return;
         } catch (apiError) {
           console.error(`Live API failed for ${symbol}:`, apiError);
