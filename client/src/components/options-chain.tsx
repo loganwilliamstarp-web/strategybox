@@ -17,9 +17,11 @@ interface OptionsChainProps {
   selectedExpiration?: string; // Add expiration prop from dashboard
   currentPrice?: number;
   onExpirationChange?: (expiration: string) => void; // Add callback to sync back to dashboard
+  userCallStrike?: number; // User's selected call strike to highlight
+  userPutStrike?: number; // User's selected put strike to highlight
 }
 
-export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpiration: dashboardExpiration, currentPrice, onExpirationChange }: OptionsChainProps) {
+export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpiration: dashboardExpiration, currentPrice, onExpirationChange, userCallStrike, userPutStrike }: OptionsChainProps) {
   console.log(`🔄 OptionsChainComponent rendered - dashboardExpiration: ${dashboardExpiration}, symbol: ${symbol}, isOpen: ${isOpen}`);
   
   // Don't render anything if modal is closed or no symbol
@@ -157,10 +159,18 @@ export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpirat
     const safeFormatGreek = (value: number | undefined) => value ? formatGreek(value) : "0.000";
     const safeToLocaleString = (value: number | undefined) => (value || 0).toLocaleString();
     
+    // Check if this is the user's selected strike
+    const isUserStrike = (type === 'call' && option.strike === userCallStrike) || 
+                         (type === 'put' && option.strike === userPutStrike);
+    
     return (
       <TableRow 
         key={`${option.strike}-${type}`}
-        className="hover:bg-gray-50 transition-colors"
+        className={`hover:bg-gray-50 transition-colors ${
+          isUserStrike 
+            ? 'bg-yellow-50 border-l-4 border-yellow-400 shadow-sm' 
+            : ''
+        }`}
         data-testid={`row-option-${option.strike}-${type}`}
       >
         <TableCell className="font-medium" data-testid={`text-strike-${option.strike}`}>

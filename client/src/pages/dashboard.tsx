@@ -847,6 +847,14 @@ export default function Dashboard() {
           isOpen={isOptionsChainOpen}
           selectedExpiration={selectedExpiration}
           onExpirationChange={handleExpirationChange}
+          userCallStrike={(() => {
+            const ticker = tickers.find(t => t.symbol === selectedOptionsSymbol);
+            return ticker?.position.longCallStrike;
+          })()}
+          userPutStrike={(() => {
+            const ticker = tickers.find(t => t.symbol === selectedOptionsSymbol);
+            return ticker?.position.longPutStrike;
+          })()}
           onClose={() => {
             setIsOptionsChainOpen(false);
             setSelectedOptionsSymbol("");
