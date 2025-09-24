@@ -9,6 +9,7 @@ import type {
   InsertLongStranglePosition,
   InsertUser 
 } from '@shared/schema';
+import { calculateExpectedMove } from './utils/expectedMove';
 
 // Mock ticker with proper schema structure
 interface MockTicker extends Ticker {
@@ -318,6 +319,14 @@ class MockDatabase {
   // Position methods that match the storage interface
   async createPosition(positionData: InsertLongStranglePosition): Promise<OptionsPosition> {
     const id = randomUUID();
+    
+    // Calculate expected move data
+    const expectedMove = calculateExpectedMove(
+      positionData.atmValue, // Use ATM value as current price
+      positionData.impliedVolatility,
+      positionData.daysToExpiry
+    );
+    
     const position: OptionsPosition = {
       id,
       tickerId: positionData.tickerId,
@@ -345,6 +354,14 @@ class MockDatabase {
       customCallStrike: positionData.customCallStrike || null,
       customPutStrike: positionData.customPutStrike || null,
       expirationCycleForCustomStrikes: positionData.expirationCycleForCustomStrikes || null,
+      // Expected move fields
+      callIV: null,
+      putIV: null,
+      expectedMoveWeeklyLow: expectedMove.weeklyLow,
+      expectedMoveWeeklyHigh: expectedMove.weeklyHigh,
+      expectedMoveDailyMove: expectedMove.dailyMove,
+      expectedMoveWeeklyMove: expectedMove.weeklyMove,
+      expectedMoveMovePercentage: expectedMove.movePercentage,
     };
     
     this.positions.set(id, position);

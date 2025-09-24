@@ -65,15 +65,15 @@ export const longStranglePositions = pgTable("long_strangle_positions", {
   ivPercentile: real("iv_percentile").notNull().default(50),
   daysToExpiry: integer("days_to_expiry").notNull(),
   expirationDate: text("expiration_date").notNull(), // Keep for backward compatibility
-  // Individual leg IV values for accurate display (temporarily disabled)
-  // callIV: real("call_iv"),
-  // putIV: real("put_iv"),
-  // Expected move data for performance (temporarily disabled)
-  // expectedMoveWeeklyLow: real("expected_move_weekly_low"),
-  // expectedMoveWeeklyHigh: real("expected_move_weekly_high"),
-  // expectedMoveDailyMove: real("expected_move_daily_move"),
-  // expectedMoveWeeklyMove: real("expected_move_weekly_move"),
-  // expectedMoveMovePercentage: real("expected_move_move_percentage"),
+  // Individual leg IV values for accurate display
+  callIV: real("call_iv"),
+  putIV: real("put_iv"),
+  // Expected move data for performance
+  expectedMoveWeeklyLow: real("expected_move_weekly_low"),
+  expectedMoveWeeklyHigh: real("expected_move_weekly_high"),
+  expectedMoveDailyMove: real("expected_move_daily_move"),
+  expectedMoveWeeklyMove: real("expected_move_weekly_move"),
+  expectedMoveMovePercentage: real("expected_move_move_percentage"),
   strikesManuallySelected: boolean("strikes_manually_selected").notNull().default(false),
   // Custom strike fields for manual selection
   customCallStrike: real("custom_call_strike"), // User-selected call strike

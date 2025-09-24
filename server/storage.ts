@@ -27,6 +27,7 @@ import {
 import { randomUUID } from "crypto";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { db } from "./db";
+import { calculateExpectedMove } from "./utils/expectedMove";
 
 export interface IStorage {
   // User operations for email/password auth
@@ -89,7 +90,21 @@ export class DatabaseStorage implements IStorage {
   constructor() {
     // Initialize real user data in Supabase
     this.initializeRealUserData();
+    
+    // Run expected move migration for existing positions
+    this.runExpectedMoveMigration();
+    
     console.log('🔧 DatabaseStorage initialized - using real Supabase database');
+  }
+
+  private async runExpectedMoveMigration() {
+    try {
+      // Import and run the migration
+      const { migrateExpectedMoveData } = await import('./utils/migrateExpectedMove');
+      await migrateExpectedMoveData();
+    } catch (error) {
+      console.error('❌ Expected move migration failed:', error);
+    }
   }
 
   // User operations for email/password auth
@@ -573,9 +588,27 @@ export class DatabaseStorage implements IStorage {
         const { mockDb } = await import('./mockDatabase');
         return await mockDb.createPosition(positionData);
       }
+
+      // Calculate expected move data
+      const expectedMove = calculateExpectedMove(
+        positionData.atmValue, // Use ATM value as current price
+        positionData.impliedVolatility,
+        positionData.daysToExpiry
+      );
+
+      // Add expected move data to position
+      const positionWithExpectedMove = {
+        ...positionData,
+        expectedMoveWeeklyLow: expectedMove.weeklyLow,
+        expectedMoveWeeklyHigh: expectedMove.weeklyHigh,
+        expectedMoveDailyMove: expectedMove.dailyMove,
+        expectedMoveWeeklyMove: expectedMove.weeklyMove,
+        expectedMoveMovePercentage: expectedMove.movePercentage,
+      };
+
       const [position] = await db
         .insert(longStranglePositions)
-        .values(positionData)
+        .values(positionWithExpectedMove)
         .returning();
       return position;
     } catch (error) {
@@ -593,12 +626,36 @@ export class DatabaseStorage implements IStorage {
     const [ticker] = await db.select().from(tickers).where(and(eq(tickers.id, position.tickerId), eq(tickers.userId, userId)));
     if (!ticker) return undefined;
     
+    // Check if we need to recalculate expected move data
+    const needsExpectedMoveRecalc = updates.atmValue !== undefined || 
+                                   updates.impliedVolatility !== undefined || 
+                                   updates.daysToExpiry !== undefined;
+    
+    let finalUpdates = { ...updates, updatedAt: new Date() };
+    
+    if (needsExpectedMoveRecalc) {
+      const currentPrice = updates.atmValue ?? position.atmValue;
+      const impliedVol = updates.impliedVolatility ?? position.impliedVolatility;
+      const daysToExpiry = updates.daysToExpiry ?? position.daysToExpiry;
+      
+      const expectedMove = calculateExpectedMove(currentPrice, impliedVol, daysToExpiry);
+      
+      finalUpdates = {
+        ...finalUpdates,
+        expectedMoveWeeklyLow: expectedMove.weeklyLow,
+        expectedMoveWeeklyHigh: expectedMove.weeklyHigh,
+        expectedMoveDailyMove: expectedMove.dailyMove,
+        expectedMoveWeeklyMove: expectedMove.weeklyMove,
+        expectedMoveMovePercentage: expectedMove.movePercentage,
+      };
+    }
+    
     // Skip duplicate calculations - let the main calculation path handle all position updates
     console.log(`Updating position for ${ticker.symbol} with provided data`);
     
     const [updatedPosition] = await db
       .update(longStranglePositions)
-      .set({ ...updates, updatedAt: new Date() })
+      .set(finalUpdates)
       .where(eq(longStranglePositions.id, id))
       .returning();
     
@@ -679,7 +736,19 @@ export class DatabaseStorage implements IStorage {
     const position = await this.getPositionByTickerId(tickerId);
     if (!position) return undefined;
     
-    return { ...ticker, position };
+    // Transform database fields to expectedMove object structure
+    const positionWithExpectedMove = {
+      ...position,
+      expectedMove: position.expectedMoveWeeklyLow !== null && position.expectedMoveWeeklyHigh !== null ? {
+        weeklyLow: position.expectedMoveWeeklyLow,
+        weeklyHigh: position.expectedMoveWeeklyHigh,
+        dailyMove: position.expectedMoveDailyMove || 0,
+        weeklyMove: position.expectedMoveWeeklyMove || 0,
+        movePercentage: position.expectedMoveMovePercentage || 0,
+      } : undefined
+    };
+    
+    return { ...ticker, position: positionWithExpectedMove };
   }
 
   async getActiveTickersWithPositionsForUser(userId: string): Promise<TickerWithPosition[]> {
@@ -689,7 +758,19 @@ export class DatabaseStorage implements IStorage {
     for (const ticker of activeTickers) {
       const position = await this.getPositionByTickerId(ticker.id);
       if (position) {
-        result.push({ ...ticker, position });
+        // Transform database fields to expectedMove object structure
+        const positionWithExpectedMove = {
+          ...position,
+          expectedMove: position.expectedMoveWeeklyLow !== null && position.expectedMoveWeeklyHigh !== null ? {
+            weeklyLow: position.expectedMoveWeeklyLow,
+            weeklyHigh: position.expectedMoveWeeklyHigh,
+            dailyMove: position.expectedMoveDailyMove || 0,
+            weeklyMove: position.expectedMoveWeeklyMove || 0,
+            movePercentage: position.expectedMoveMovePercentage || 0,
+          } : undefined
+        };
+        
+        result.push({ ...ticker, position: positionWithExpectedMove });
       }
     }
 
