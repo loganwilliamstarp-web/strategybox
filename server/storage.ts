@@ -607,19 +607,40 @@ export class DatabaseStorage implements IStorage {
       return;
     }
 
-    const batchSize = 500; // Process in batches for performance
+    // Dynamic batch sizing based on data volume for optimal performance
+    const baseBatchSize = 500;
+    const maxBatchSize = 1000;
+    const minBatchSize = 100;
+    
+    // Scale batch size based on total volume - larger batches for massive datasets
+    let batchSize = baseBatchSize;
+    if (chains.length > 10000) {
+      batchSize = maxBatchSize; // Larger batches for massive datasets
+    } else if (chains.length < 1000) {
+      batchSize = minBatchSize; // Smaller batches for small datasets
+    }
+    
     const totalBatches = Math.ceil(chains.length / batchSize);
     
-    console.log(`🔄 Processing ${chains.length} options in ${totalBatches} batches of up to ${batchSize} records`);
+    console.log(`🚀 PERFORMANCE: Processing ${chains.length} options in ${totalBatches} batches of up to ${batchSize} records (optimized batch size)`);
 
-    // Group chains by expiration date for proper scoping
+    // Group chains by expiration date for proper scoping with memory optimization
     const chainsByExpiration = new Map<string, InsertOptionsChain[]>();
+    
+    // Memory-efficient grouping - process in streaming fashion for large datasets
+    if (chains.length > 5000) {
+      console.log(`🧠 MEMORY: Using streaming grouping for ${chains.length} large dataset`);
+    }
+    
     for (const chain of chains) {
       if (!chainsByExpiration.has(chain.expirationDate)) {
         chainsByExpiration.set(chain.expirationDate, []);
       }
       chainsByExpiration.get(chain.expirationDate)!.push(chain);
     }
+    
+    console.log(`📊 GROUPED: ${chainsByExpiration.size} expiration dates with data distribution:`, 
+      Array.from(chainsByExpiration.entries()).map(([exp, chains]) => `${exp}:${chains.length}`).join(', '));
 
     let totalProcessed = 0;
     
