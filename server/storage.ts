@@ -198,32 +198,53 @@ export class DatabaseStorage implements IStorage {
           return existingUser[0];
         }
         
-        // User exists with different ID, need to update tickers first, then user ID
-        console.log(`🔄 Updating existing user ID from ${existingUser[0].id} to ${userData.id}`);
+        // User exists with different ID, need to migrate all references atomically
+        console.log(`🔄 Migrating user ID from ${existingUser[0].id} to ${userData.id} with atomic transaction`);
         
-        // First, update all tickers to reference the new user ID
-        await db
-          .update(tickers)
-          .set({
-            userId: userData.id,
-          })
-          .where(eq(tickers.userId, existingUser[0].id));
+        // CRITICAL: Use transaction to ensure atomicity across all related tables
+        const migratedUser = await db.transaction(async (tx) => {
+          // 1. Update all tickers to reference the new user ID
+          await tx
+            .update(tickers)
+            .set({ userId: userData.id })
+            .where(eq(tickers.userId, existingUser[0].id));
+          
+          console.log(`🔄 TX: Updated tickers to reference new user ID: ${userData.id}`);
+          
+          // 2. Update all price alerts to reference the new user ID
+          await tx
+            .update(priceAlerts)
+            .set({ userId: userData.id })
+            .where(eq(priceAlerts.userId, existingUser[0].id));
+          
+          console.log(`🔄 TX: Updated price alerts to reference new user ID: ${userData.id}`);
+          
+          // 3. Update all positions to reference the new user ID (via tickers)
+          // Note: positions reference tickers, so they're updated indirectly
+          
+          // 4. Update sessions to reference the new user ID if they exist
+          // Note: sessions are handled separately via session store, but check if needed
+          
+          // 5. Insert the new user record with the new ID
+          const [newUser] = await tx
+            .insert(users)
+            .values(payload)
+            .returning();
+          
+          console.log(`🔄 TX: Inserted new user record: ${userData.id}`);
+          
+          // 6. Delete the old user record (this must be last to avoid FK violations)
+          await tx
+            .delete(users)
+            .where(eq(users.id, existingUser[0].id));
+          
+          console.log(`🔄 TX: Deleted old user record: ${existingUser[0].id}`);
+          
+          return newUser;
+        });
         
-        console.log(`🔄 Updated tickers to reference new user ID: ${userData.id}`);
-        
-        // Delete the old user record
-        await db
-          .delete(users)
-          .where(eq(users.id, existingUser[0].id));
-        
-        // Insert the new user record with the new ID
-        const [newUser] = await db
-          .insert(users)
-          .values(payload)
-          .returning();
-        
-        console.log(`✅ Successfully migrated user from ${existingUser[0].id} to ${userData.id}`);
-        return newUser;
+        console.log(`✅ ATOMIC MIGRATION COMPLETE: Successfully migrated user from ${existingUser[0].id} to ${userData.id}`);
+        return migratedUser;
       } else {
         // No existing user, create new one
         const [user] = await db
@@ -600,6 +621,34 @@ export class DatabaseStorage implements IStorage {
   // REMOVED: Mock data generation function - system now exclusively uses real market data from marketdata.app
 
   async updateOptionsChain(symbol: string, chains: InsertOptionsChain[]): Promise<void> {
+    return this.updateOptionsChainWithRetry(symbol, chains, 0);
+  }
+
+  private async updateOptionsChainWithRetry(symbol: string, chains: InsertOptionsChain[], retryCount: number): Promise<void> {
+    const maxRetries = 3;
+    const baseDelayMs = 100; // Base delay for exponential backoff
+    
+    try {
+      await this.doUpdateOptionsChain(symbol, chains);
+    } catch (error) {
+      // Handle deadlock retries with exponential backoff
+      if (error instanceof Error && error.message.startsWith('DEADLOCK_RETRY_') && retryCount < maxRetries) {
+        const delayMs = baseDelayMs * Math.pow(2, retryCount) + Math.random() * 100; // Add jitter
+        console.log(`🔄 DEADLOCK RETRY ${retryCount + 1}/${maxRetries} for ${symbol} after ${delayMs}ms delay`);
+        
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        return this.updateOptionsChainWithRetry(symbol, chains, retryCount + 1);
+      }
+      
+      // Re-throw non-deadlock errors or exhausted retries
+      if (retryCount >= maxRetries) {
+        console.error(`❌ DEADLOCK RETRY EXHAUSTED: Failed to update ${symbol} after ${maxRetries} attempts`);
+      }
+      throw error;
+    }
+  }
+
+  private async doUpdateOptionsChain(symbol: string, chains: InsertOptionsChain[]): Promise<void> {
     console.log(`🔄 ROBUST UPSERT: updateOptionsChain called for ${symbol} with ${chains.length} chains`);
     
     if (chains.length === 0) {
@@ -656,13 +705,21 @@ export class DatabaseStorage implements IStorage {
       console.log(`🔒 Acquiring advisory lock for ${symbol}:${expirationDate} (ID: ${lockId})`);
       
       // Use database transaction with advisory lock for concurrency control
+      // CRITICAL: Advisory lock must be within the same transaction/connection as upserts
       await db.transaction(async (tx) => {
-        // Acquire advisory lock for this symbol+expiration - prevents concurrent updates
+        // Acquire transaction-scoped advisory lock - automatically released when transaction ends
+        // Using pg_advisory_xact_lock ensures lock is held for entire transaction on same connection
         try {
-          const lockResult = await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockId})`);
-          console.log(`🔒 Advisory lock acquired for ${symbol}:${expirationDate}`);
+          await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockId})`);
+          console.log(`🔒 Transaction-scoped advisory lock acquired for ${symbol}:${expirationDate} (lockId: ${lockId})`);
         } catch (lockError) {
-          console.error(`❌ Failed to acquire advisory lock for ${symbol}:${expirationDate}:`, lockError);
+          console.error(`❌ Failed to acquire advisory lock for ${symbol}:${expirationDate} (lockId: ${lockId}):`, lockError);
+          
+          // Check if it's a deadlock - retry with exponential backoff
+          if (lockError instanceof Error && lockError.message.includes('deadlock')) {
+            console.log(`🔄 Deadlock detected for ${symbol}:${expirationDate}, will retry after delay`);
+            throw new Error(`DEADLOCK_RETRY_${symbol}_${expirationDate}`);
+          }
           throw lockError;
         }
         
