@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes/index";
 import { setupVite, serveStatic, log } from "./vite";
 import { env } from "./config/environment";
@@ -17,6 +18,7 @@ app.set('trust proxy', true);
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+app.use(cookieParser());
 
 // Request timeout middleware (30 second timeout)
 app.use(timeoutHandler(30000));

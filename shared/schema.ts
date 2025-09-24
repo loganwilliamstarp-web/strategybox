@@ -26,13 +26,12 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table - updated for email/password auth
+// User storage table - updated for Supabase-only auth
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id").primaryKey(), // Supabase user ID (no default, comes from Supabase)
   email: varchar("email").notNull().unique(),
-  password: varchar("password").notNull(), // Hashed password
-  firstName: varchar("first_name").notNull(),
-  lastName: varchar("last_name").notNull(),
+  firstName: varchar("first_name"), // Optional for Supabase users
+  lastName: varchar("last_name"), // Optional for Supabase users
   profileImageUrl: varchar("profile_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -251,16 +250,17 @@ export type OptionsChainData = {
 export type InsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
-// Schema for user registration
+// Schema for Supabase user creation/update
 export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  profileImageUrl: true,
   createdAt: true,
   updatedAt: true,
 });
 
-// Schema for user login
-export const loginUserSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
+// Interface for creating/updating users from Supabase
+export interface CreateOrUpdateUser {
+  id: string; // Supabase user ID
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  profileImageUrl?: string;
+}

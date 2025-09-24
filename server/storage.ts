@@ -25,6 +25,13 @@ import {
   type CreatePriceAlertRequest,
   type ExitRecommendation,
   type InsertExitRecommendation,
+  // Import the actual table definitions
+  tickers,
+  users,
+  longStranglePositions,
+  optionsChains,
+  priceAlerts,
+  exitRecommendations,
 } from "@shared/schema";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { db } from "./db";
@@ -34,8 +41,9 @@ import { handleDbError } from "./plugins/dbFallbackGuard";
 export interface CreateOrUpdateUser {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
+  profileImageUrl?: string;
 }
 
 export interface IStorage {
@@ -174,7 +182,7 @@ export class DatabaseStorage implements IStorage {
         email: userData.email,
         firstName: userData.firstName,
         lastName: userData.lastName,
-        password: '',
+        profileImageUrl: userData.profileImageUrl,
       };
 
       const [user] = await db
@@ -185,6 +193,7 @@ export class DatabaseStorage implements IStorage {
           set: {
             firstName: userData.firstName,
             lastName: userData.lastName,
+            profileImageUrl: userData.profileImageUrl,
             updatedAt: new Date(),
           },
         })

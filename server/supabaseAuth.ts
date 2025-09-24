@@ -3,26 +3,41 @@ import { Express } from "express";
 import { supabase } from "./config/supabase";
 import { storage } from "./storage";
 
-async function exchangeTokenForUser(accessToken: string) {
-  const { data, error } = await supabase.auth.getUser(accessToken);
-  if (error) {
-    throw error;
-  }
-  return data.user;
-}
+const ACCESS_COOKIE = 'sb-access-token';
+const REFRESH_COOKIE = 'sb-refresh-token';
 
 function setAuthCookies(res, session) {
   if (!session?.access_token) return;
-  res.cookie('sb-access-token', session.access_token, {
+  res.cookie(ACCESS_COOKIE, session.access_token, {
     httpOnly: true,
     sameSite: 'lax',
+    secure: false,
     maxAge: session.expires_in * 1000,
   });
-  res.cookie('sb-refresh-token', session.refresh_token, {
+  res.cookie(REFRESH_COOKIE, session.refresh_token, {
     httpOnly: true,
     sameSite: 'lax',
+    secure: false,
     maxAge: 60 * 60 * 24 * 30 * 1000,
   });
+}
+
+async function getUserFromTokens(accessToken?: string, refreshToken?: string) {
+  if (!accessToken) return null;
+
+  const { data: accessData, error: accessError } = await supabase.auth.getUser(accessToken);
+  if (accessData?.user) {
+    return { user: accessData.user, session: null };
+  }
+
+  if (refreshToken) {
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
+    if (!refreshError && refreshData?.session?.user) {
+      return { user: refreshData.session.user, session: refreshData.session };
+    }
+  }
+
+  return null;
 }
 
 export function setupSupabaseAuth(app: Express) {
@@ -30,51 +45,37 @@ export function setupSupabaseAuth(app: Express) {
 
   app.use(async (req, res, next) => {
     try {
-      const accessToken = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.['sb-access-token'];
-      const refreshToken = req.cookies?.['sb-refresh-token'];
+      const accessToken = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.[ACCESS_COOKIE];
+      const refreshToken = req.cookies?.[REFRESH_COOKIE];
 
       if (!accessToken) {
         return next();
       }
 
-      let user;
-      try {
-        user = await exchangeTokenForUser(accessToken);
-      } catch (error) {
-        if (refreshToken) {
-          const { data, error: refreshError } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
-          if (!refreshError && data.session) {
-            setAuthCookies(res, data.session);
-            user = data.session.user;
-          } else {
-            console.warn(`⚠️ Refresh token failed: ${refreshError?.message}`);
-          }
-        }
-        if (!user) {
-          console.warn(`⚠️ Supabase token invalid: ${error.message}`);
-          return next();
-        }
+      const result = await getUserFromTokens(accessToken, refreshToken);
+      if (!result?.user) {
+        return next();
+      }
+
+      if (result.session) {
+        setAuthCookies(res, result.session);
       }
 
       req.user = {
-        id: user.id,
-        email: user.email || '',
-        firstName: user.user_metadata?.first_name || '',
-        lastName: user.user_metadata?.last_name || '',
-        createdAt: new Date(user.created_at),
-        updatedAt: new Date(user.updated_at || user.created_at),
+        id: result.user.id,
+        email: result.user.email || '',
+        firstName: result.user.user_metadata?.first_name || '',
+        lastName: result.user.user_metadata?.last_name || '',
+        createdAt: new Date(result.user.created_at),
+        updatedAt: new Date(result.user.updated_at || result.user.created_at),
       };
 
-      try {
-        await storage.createOrUpdateUser({
-          id: user.id,
-          email: user.email || '',
-          firstName: user.user_metadata?.first_name || '',
-          lastName: user.user_metadata?.last_name || '',
-        });
-      } catch (dbError) {
-        console.warn(`⚠️ Failed to ensure local user record: ${dbError}`);
-      }
+      await storage.createOrUpdateUser({
+        id: result.user.id,
+        email: result.user.email || '',
+        firstName: result.user.user_metadata?.first_name || '',
+        lastName: result.user.user_metadata?.last_name || '',
+      });
 
       next();
     } catch (error) {
@@ -166,8 +167,8 @@ export function setupSupabaseAuth(app: Express) {
         await supabase.auth.signOut();
       }
 
-      res.clearCookie('sb-access-token');
-      res.clearCookie('sb-refresh-token');
+      res.clearCookie(ACCESS_COOKIE);
+      res.clearCookie(REFRESH_COOKIE);
 
       res.json({ message: "Logged out successfully" });
     } catch (error) {
