@@ -708,6 +708,100 @@ export class DatabaseStorage implements IStorage {
     return Math.abs(hash);
   }
 
+  // Cleanup stale options data to maintain database performance
+  async cleanupStaleOptionsData(): Promise<void> {
+    console.log(`🧹 CLEANUP: Starting stale options data cleanup...`);
+    
+    try {
+      // Define cleanup thresholds
+      const expiredThresholdDays = 7; // Remove options expired more than 7 days ago
+      const staleDataThresholdDays = 30; // Remove very old price updates (30+ days)
+      
+      const expiredCutoff = new Date();
+      expiredCutoff.setDate(expiredCutoff.getDate() - expiredThresholdDays);
+      
+      const staleCutoff = new Date();
+      staleCutoff.setDate(staleCutoff.getDate() - staleDataThresholdDays);
+      
+      console.log(`🧹 Cleanup thresholds: expired cutoff=${expiredCutoff.toISOString()}, stale cutoff=${staleCutoff.toISOString()}`);
+      
+      // Use global cleanup lock to prevent conflicts with active updates
+      const cleanupLockId = this.hashStringToInt('global_cleanup_lock');
+      
+      await db.transaction(async (tx) => {
+        // Acquire global cleanup lock
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${cleanupLockId})`);
+        console.log(`🔒 Global cleanup lock acquired`);
+        
+        // 1. Remove options contracts that expired long ago
+        const expiredDeleteResult = await tx
+          .delete(optionsChains)
+          .where(sql`expiration_date < ${expiredCutoff.toISOString().split('T')[0]}`);
+        
+        console.log(`🗑️ Removed expired options contracts: ${expiredDeleteResult.rowCount} records`);
+        
+        // 2. Remove very old price data (keep recent data for historical reference)
+        const staleDeleteResult = await tx
+          .delete(optionsChains)
+          .where(
+            and(
+              sql`expiration_date >= ${expiredCutoff.toISOString().split('T')[0]}`, // Not expired yet
+              sql`updated_at < ${staleCutoff.toISOString()}` // But very old price data
+            )
+          );
+        
+        console.log(`🗑️ Removed stale price data: ${staleDeleteResult.rowCount} records`);
+        
+        // 3. Get cleanup statistics
+        const remainingCount = await tx
+          .select({ count: sql<number>`count(*)` })
+          .from(optionsChains);
+        
+        const activeSymbols = await tx
+          .selectDistinct({ symbol: optionsChains.symbol })
+          .from(optionsChains);
+        
+        console.log(`📊 Cleanup complete: ${remainingCount[0].count} options records remain across ${activeSymbols.length} symbols`);
+      });
+      
+      console.log(`✅ CLEANUP COMPLETE: Stale data cleanup finished successfully`);
+      
+    } catch (cleanupError) {
+      console.error(`❌ CLEANUP FAILED: Error during stale data cleanup:`, cleanupError);
+      throw cleanupError;
+    }
+  }
+
+  // Automatic cleanup scheduler - call this periodically
+  async scheduleStaleDataCleanup(): Promise<void> {
+    console.log(`⏰ SCHEDULER: Checking if cleanup is needed...`);
+    
+    try {
+      // Check if cleanup is needed (run once per day max)
+      const lastCleanupKey = 'last_cleanup_timestamp';
+      const now = Date.now();
+      const oneDayMs = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+      
+      // For simplicity, use a simple in-memory check (in production, store this in DB)
+      if (!this.lastCleanupTime || (now - this.lastCleanupTime) >= oneDayMs) {
+        console.log(`⏰ Running scheduled cleanup - last cleanup was ${this.lastCleanupTime ? new Date(this.lastCleanupTime).toISOString() : 'never'}`);
+        
+        await this.cleanupStaleOptionsData();
+        this.lastCleanupTime = now;
+        
+        console.log(`⏰ Scheduled cleanup completed, next cleanup after ${new Date(now + oneDayMs).toISOString()}`);
+      } else {
+        const nextCleanup = new Date(this.lastCleanupTime + oneDayMs);
+        console.log(`⏰ Cleanup not needed yet, next cleanup scheduled for ${nextCleanup.toISOString()}`);
+      }
+    } catch (schedulerError) {
+      console.error(`❌ SCHEDULER ERROR: Failed to run scheduled cleanup:`, schedulerError);
+      // Don't throw - cleanup failures shouldn't break normal operations
+    }
+  }
+
+  private lastCleanupTime: number | null = null;
+
   async saveOptionsChain(symbol: string, chainData: OptionsChainData): Promise<void> {
     try {
       console.log(`💾 UPSERT METHOD CALLED: Saving options chain for ${symbol} to database using UPSERT strategy...`);
