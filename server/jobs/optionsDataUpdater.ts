@@ -60,6 +60,9 @@ export class OptionsDataUpdater {
     try {
       console.log('🔄 OptionsDataUpdater: Starting OPTIMIZED options data update...');
 
+      // Check for Saturday 8am historical data archival on every update cycle
+      await storage.scheduleSaturdayArchival();
+
       // Get ALL unique symbols from ALL users (not just one user)
       const allTickers = await storage.getAllActiveTickersAcrossAllUsers();
       const uniqueSymbols = [...new Set(allTickers.map(ticker => ticker.symbol))];
