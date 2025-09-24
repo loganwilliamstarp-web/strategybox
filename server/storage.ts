@@ -1,4 +1,13 @@
 import {
+  // Table definitions
+  tickers,
+  users,
+  longStranglePositions,
+  optionsChains,
+  priceAlerts,
+  exitRecommendations,
+  sessions,
+  // Type definitions
   type Ticker,
   type InsertTicker,
   type OptionsPosition,
