@@ -84,6 +84,9 @@ export interface IStorage {
   // Get all active tickers across all users (for optimized API calls)
   getAllActiveTickersAcrossAllUsers(): Promise<Ticker[]>;
   saveOptionsChain(symbol: string, chainData: OptionsChainData): Promise<void>;
+  
+  // Get available expiration dates from database
+  getAvailableExpirationDates(): Promise<string[]>;
 
   // Price alert operations
   createPriceAlert(userId: string, alert: CreatePriceAlertRequest): Promise<PriceAlert>;
@@ -1261,6 +1264,27 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`❌ Failed to update options chain data for ${symbol}:`, error);
       handleDbError('updateOptionsChainData', error);
+    }
+  }
+
+  async getAvailableExpirationDates(): Promise<string[]> {
+    try {
+      console.log('📅 Getting available expiration dates from database...');
+      
+      // Query for distinct expiration dates from options_chains table
+      const results = await db
+        .selectDistinct({ expirationDate: optionsChains.expirationDate })
+        .from(optionsChains)
+        .orderBy(optionsChains.expirationDate);
+      
+      const expirationDates = results.map(r => r.expirationDate).filter(Boolean);
+      console.log(`✅ Found ${expirationDates.length} available expiration dates:`, expirationDates);
+      
+      return expirationDates;
+    } catch (error) {
+      console.error('❌ Failed to get available expiration dates:', error);
+      handleDbError('getAvailableExpirationDates', error);
+      return [];
     }
   }
 

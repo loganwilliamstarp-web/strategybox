@@ -345,4 +345,25 @@ export function registerOptionsChainRoutes(app: Express): void {
       });
     }
   });
+
+  // Get available expiration dates from database 
+  app.get("/api/available-expirations", requireSupabaseAuth, rateLimitRules.marketData, async (req: any, res) => {
+    try {
+      console.log('📅 Fetching available expiration dates from database...');
+      
+      // Get all distinct expiration dates from database
+      const distinctExpirations = await storage.getAvailableExpirationDates();
+      
+      console.log(`📅 Found ${distinctExpirations.length} available expiration dates:`, distinctExpirations);
+      
+      res.json(distinctExpirations);
+
+    } catch (error) {
+      console.error('❌ Failed to fetch available expiration dates:', error);
+      res.status(500).json({
+        error: "Failed to fetch available expiration dates",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 }
