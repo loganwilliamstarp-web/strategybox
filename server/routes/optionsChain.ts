@@ -176,30 +176,29 @@ export function registerOptionsChainRoutes(app: Express): void {
           console.error(`❌ Failed to populate options data for ${symbol}:`, populateError);
         }
         
-              // If still no data, try to get any available data for the symbol
-              if (expirationDate) {
-                console.log(`🔄 No data for specific expiration ${expirationDate}, trying to get any available data for ${symbol}`);
-                const anyData = await storage.getOptionsChainFromDB(symbol);
-                if (anyData && anyData.length > 0) {
-                  console.log(`✅ Found ${anyData.length} options for ${symbol} with different expirations`);
-                  return formatAndReturnOptionsData(res, symbol, anyData, undefined);
-                }
-              }
-              
-              return res.status(404).json({
-                error: "No options data available",
-                message: `No options chain data found for ${symbol}${expirationDate ? ` with expiration ${expirationDate}` : ''}`
-              });
-            }
+        // If still no data, try to get any available data for the symbol
+        if (expirationDate) {
+          console.log(`🔄 No data for specific expiration ${expirationDate}, trying to get any available data for ${symbol}`);
+          const anyData = await storage.getOptionsChainFromDB(symbol);
+          if (anyData && anyData.length > 0) {
+            console.log(`✅ Found ${anyData.length} options for ${symbol} with different expirations`);
+            return formatAndReturnOptionsData(res, symbol, anyData, undefined);
+          }
+        }
+        
+        return res.status(404).json({
+          error: "No options data available",
+          message: `No options chain data found for ${symbol}${expirationDate ? ` with expiration ${expirationDate}` : ''}`
+        });
+      }
 
-            // If we have data but not for the requested expiration, return what we have
-            if (expirationDate && optionsData.length > 0 && !optionsData.some(opt => opt.expirationDate === expirationDate)) {
-              console.log(`⚠️ Requested expiration ${expirationDate} not found in database for ${symbol}`);
-              const availableExpirations = [...new Set(optionsData.map(opt => opt.expirationDate))].sort();
-              console.log(`📅 Available expirations in database: ${availableExpirations.join(', ')}`);
-              console.log(`📅 Returning all available data from database`);
-              return formatAndReturnOptionsData(res, symbol, optionsData, undefined);
-            }
+      // If we have data but not for the requested expiration, return what we have
+      if (expirationDate && optionsData.length > 0 && !optionsData.some(opt => opt.expirationDate === expirationDate)) {
+        console.log(`⚠️ Requested expiration ${expirationDate} not found in database for ${symbol}`);
+        const availableExpirations = [...new Set(optionsData.map(opt => opt.expirationDate))].sort();
+        console.log(`📅 Available expirations in database: ${availableExpirations.join(', ')}`);
+        console.log(`📅 Returning all available data from database`);
+        return formatAndReturnOptionsData(res, symbol, optionsData, undefined);
       }
 
       return formatAndReturnOptionsData(res, symbol, optionsData, expirationDate);
