@@ -13,6 +13,7 @@ import { registerMarketDataRoutes } from "./marketData";
 import { registerPortfolioRoutes } from "./portfolio";
 import { registerAlertsRoutes } from "./alerts";
 import { registerRefreshRoutes } from "./refresh";
+import { registerDataRefreshRoutes } from "./dataRefresh";
 import { registerStrategyRoutes } from "./strategies";
 import { setupWebSocket } from "./websocket";
 
@@ -44,6 +45,7 @@ export function registerRoutes(app: Express): Server {
   registerPortfolioRoutes(app);
   registerAlertsRoutes(app);
   registerRefreshRoutes(app);
+  registerDataRefreshRoutes(app);
   registerStrategyRoutes(app);
   
   // Register remaining legacy routes (to be split further)
