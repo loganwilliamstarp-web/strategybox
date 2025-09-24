@@ -82,10 +82,10 @@ export const SchwabStyleOptionsChain: React.FC<SchwabStyleOptionsChainProps> = (
   }
 
   // Group options by expiration and strike
-  const expirations = [...new Set(optionsData.options.map(opt => opt.expiration))].sort();
+  const expirations = [...new Set(optionsData.options.map(opt => opt.expiration_date))].sort();
   const filteredOptions = selectedExpiration 
-    ? optionsData.options.filter(opt => opt.expiration === selectedExpiration)
-    : optionsData.options.filter(opt => opt.expiration === expirations[0]);
+    ? optionsData.options.filter(opt => opt.expiration_date === selectedExpiration)
+    : optionsData.options.filter(opt => opt.expiration_date === expirations[0]);
 
   // Group by strike price
   const strikeGroups = filteredOptions.reduce((acc, option) => {

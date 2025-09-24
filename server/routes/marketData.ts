@@ -290,6 +290,13 @@ export function registerMarketDataRoutes(app: Express): void {
       );
       console.log(`📊 Returning ${filteredOptionsCount} filtered options (±20 strikes) for UI display across ${expirationDates.length} expiration dates`);
       
+      // Add cache-busting headers to ensure fresh data
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'ETag': `"${Date.now()}-${Math.random()}"` // Force cache invalidation
+      });
       res.json(responseData);
     } catch (error) {
       console.error(`Failed to fetch options chain for ${req.params.symbol}:`, error);

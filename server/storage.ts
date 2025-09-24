@@ -79,6 +79,14 @@ export interface IStorage {
   // Options chain operations
   getOptionsChain(symbol: string): Promise<OptionsChainData>;
   updateOptionsChain(symbol: string, chains: InsertOptionsChain[]): Promise<void>;
+  
+  // Database-based options chain operations (single source of truth)
+  getOptionsChainFromDB(symbol: string, expirationDate?: string): Promise<OptionsChain[]>;
+  clearOptionsChainData(symbol: string): Promise<void>;
+  updateOptionsChainData(symbol: string, optionsData: any[]): Promise<void>;
+  
+  // Get all active tickers across all users (for optimized API calls)
+  getAllActiveTickersAcrossAllUsers(): Promise<Ticker[]>;
   saveOptionsChain(symbol: string, chainData: OptionsChainData): Promise<void>;
 
   // Price alert operations
@@ -191,6 +199,12 @@ export class DatabaseStorage implements IStorage {
       const existingUser = await db.select().from(users).where(eq(users.email, userData.email));
       
       if (existingUser.length > 0) {
+        // Check if the existing user has the same ID - if so, just return it
+        if (existingUser[0].id === userData.id) {
+          console.log(`✅ User already exists with same ID: ${userData.id}`);
+          return existingUser[0];
+        }
+        
         // User exists with different ID, need to update tickers first, then user ID
         console.log(`🔄 Updating existing user ID from ${existingUser[0].id} to ${userData.id}`);
         
@@ -204,21 +218,19 @@ export class DatabaseStorage implements IStorage {
         
         console.log(`🔄 Updated tickers to reference new user ID: ${userData.id}`);
         
-        // Now update the user ID
-        const [updatedUser] = await db
-          .update(users)
-          .set({
-            id: userData.id,
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            profileImageUrl: userData.profileImageUrl,
-            updatedAt: new Date(),
-          })
-          .where(eq(users.email, userData.email))
+        // Delete the old user record
+        await db
+          .delete(users)
+          .where(eq(users.id, existingUser[0].id));
+        
+        // Insert the new user record with the new ID
+        const [newUser] = await db
+          .insert(users)
+          .values(payload)
           .returning();
         
-        console.log(`✅ Successfully updated user ID and migrated tickers`);
-        return updatedUser;
+        console.log(`✅ Successfully migrated user from ${existingUser[0].id} to ${userData.id}`);
+        return newUser;
       } else {
         // No existing user, create new one
         const [user] = await db
@@ -606,21 +618,72 @@ export class DatabaseStorage implements IStorage {
 
   async saveOptionsChain(symbol: string, chainData: OptionsChainData): Promise<void> {
     try {
-      console.log(`💾 Saving options chain for ${symbol} to database...`);
+      console.log(`💾 UPSERT METHOD CALLED: Saving options chain for ${symbol} to database using UPSERT strategy...`);
+      console.log(`💾 UPSERT INPUT DATA:`, {
+        symbol,
+        hasOptions: !!chainData.options,
+        optionsCount: chainData.options?.length || 0,
+        hasChains: !!chainData.chains,
+        expirationDates: chainData.expirationDates || [],
+        dataSource: chainData.dataSource,
+        timestamp: chainData.timestamp
+      });
       
       if (!db) {
         console.error('❌ DATABASE SAVE FAILED: db is null/undefined!');
         return;
       }
-
-      // Delete existing chains for this symbol
-      await db.delete(optionsChains).where(eq(optionsChains.symbol, symbol));
-      console.log(`🗑️ Cleared existing options chains for ${symbol}`);
       
+      // Test database connection
+      try {
+        console.log(`🔍 Testing database connection for ${symbol}...`);
+        const testQuery = await db.select().from(optionsChains).where(eq(optionsChains.symbol, symbol)).limit(1);
+        console.log(`✅ Database connection test successful - found ${testQuery.length} existing records`);
+      } catch (dbTestError) {
+        console.error(`❌ Database connection test failed:`, dbTestError);
+        throw dbTestError;
+      }
+
       // Convert OptionsChainData to database format
       const chainRecords: InsertOptionsChain[] = [];
       
-      if (chainData.chains) {
+      // Handle both old format (chains) and new format (options array)
+      if (chainData.options && Array.isArray(chainData.options)) {
+        // New format: direct array of options
+        for (const option of chainData.options) {
+          if (!option.strike || !option.expiration_date || !option.contract_type) {
+            console.warn(`⚠️ Skipping invalid option:`, option);
+            continue;
+          }
+          
+          // Convert expiration_date from timestamp to YYYY-MM-DD format if needed
+          let expirationDate = option.expiration_date;
+          if (typeof expirationDate === 'number') {
+            expirationDate = new Date(expirationDate * 1000).toISOString().split('T')[0];
+          } else if (typeof expirationDate === 'string' && expirationDate.includes('/')) {
+            const date = new Date(expirationDate);
+            expirationDate = date.toISOString().split('T')[0];
+          }
+          
+          chainRecords.push({
+            symbol,
+            expirationDate: expirationDate,
+            strike: option.strike,
+            optionType: option.contract_type, // 'call' or 'put'
+            bid: option.bid || 0,
+            ask: option.ask || 0,
+            lastPrice: option.last || 0,
+            volume: option.volume || 0,
+            openInterest: option.open_interest || 0,
+            impliedVolatility: option.implied_volatility || 0,
+            delta: option.delta || 0,
+            gamma: option.gamma || 0,
+            theta: option.theta || 0,
+            vega: option.vega || 0,
+          });
+        }
+      } else if (chainData.chains) {
+        // Old format: grouped by expiration
         for (const [expirationDate, chain] of Object.entries(chainData.chains)) {
           // Save calls
           for (const call of chain.calls) {
@@ -631,7 +694,7 @@ export class DatabaseStorage implements IStorage {
               strike: call.strike,
               bid: call.bid,
               ask: call.ask,
-              lastPrice: call.last || 0, // Fix: API uses 'last', DB expects 'lastPrice'
+              lastPrice: call.last || 0,
               volume: call.volume || 0,
               openInterest: call.openInterest || 0,
               impliedVolatility: call.impliedVolatility || 0,
@@ -651,7 +714,7 @@ export class DatabaseStorage implements IStorage {
               strike: put.strike,
               bid: put.bid,
               ask: put.ask,
-              lastPrice: put.last || 0, // Fix: API uses 'last', DB expects 'lastPrice'
+              lastPrice: put.last || 0,
               volume: put.volume || 0,
               openInterest: put.openInterest || 0,
               impliedVolatility: put.impliedVolatility || 0,
@@ -664,16 +727,52 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
-      // Insert new chains in batches
+      // SIMPLE APPROACH: Delete existing and insert new
       if (chainRecords.length > 0) {
-        // Insert in batches of 100 to avoid query limits
+        console.log(`🔄 SIMPLE SAVE: Processing ${chainRecords.length} options contracts for ${symbol}...`);
+        console.log(`🔍 Sample record structure:`, chainRecords[0]);
+        
+        // Step 1: Delete existing data for this symbol
+        console.log(`🗑️ Deleting existing data for ${symbol}...`);
+        const deleteResult = await db.delete(optionsChains).where(eq(optionsChains.symbol, symbol));
+        console.log(`✅ Deleted existing data for ${symbol}`);
+        
+        // Step 2: Insert new data in batches
+        console.log(`📥 Inserting ${chainRecords.length} new records for ${symbol}...`);
         const batchSize = 100;
+        let totalInserted = 0;
+        
         for (let i = 0; i < chainRecords.length; i += batchSize) {
           const batch = chainRecords.slice(i, i + batchSize);
-          await db.insert(optionsChains).values(batch);
+          console.log(`📥 Inserting batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(chainRecords.length/batchSize)} (${batch.length} records)...`);
+          
+          try {
+            await db.insert(optionsChains).values(batch);
+            totalInserted += batch.length;
+            console.log(`✅ Batch ${Math.floor(i/batchSize) + 1} inserted successfully`);
+          } catch (batchError) {
+            console.error(`❌ Batch ${Math.floor(i/batchSize) + 1} failed:`, batchError);
+            throw batchError;
+          }
         }
         
-        console.log(`✅ Saved ${chainRecords.length} options contracts for ${symbol} to database`);
+        console.log(`✅ SIMPLE SAVE completed for ${symbol}: ${totalInserted} records inserted`);
+        
+        // Log unique expiration dates
+        const uniqueExpirations = [...new Set(chainRecords.map(r => r.expirationDate))].sort();
+        console.log(`📅 Unique expiration dates saved: ${uniqueExpirations.join(', ')}`);
+        
+        // Verify what was actually saved to database
+        try {
+          const verificationData = await db.select().from(optionsChains).where(eq(optionsChains.symbol, symbol));
+          console.log(`🔍 DATABASE VERIFICATION: ${verificationData.length} records found in database for ${symbol} after save`);
+          if (verificationData.length > 0) {
+            const dbExpirations = [...new Set(verificationData.map(r => r.expirationDate))].sort();
+            console.log(`🔍 DATABASE EXPIRATIONS: ${dbExpirations.join(', ')}`);
+          }
+        } catch (verifyError) {
+          console.error(`❌ Database verification failed:`, verifyError);
+        }
       } else {
         console.warn(`⚠️ No options data to save for ${symbol}`);
       }
@@ -681,6 +780,124 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error(`❌ Failed to save options chain for ${symbol}:`, error);
       throw error;
+    }
+  }
+
+  // Database-based options chain operations (single source of truth)
+  async getOptionsChainFromDB(symbol: string, expirationDate?: string): Promise<OptionsChain[]> {
+    try {
+      console.log(`📊 Getting options chain from database for ${symbol}${expirationDate ? ` with expiration ${expirationDate}` : ''}`);
+      
+      let query = db.select().from(optionsChains).where(eq(optionsChains.symbol, symbol));
+      
+      if (expirationDate) {
+        query = query.where(and(eq(optionsChains.symbol, symbol), eq(optionsChains.expirationDate, expirationDate)));
+      }
+      
+      const results = await query;
+      console.log(`✅ Retrieved ${results.length} options from database for ${symbol}`);
+      return results;
+    } catch (error) {
+      console.error(`❌ Failed to get options chain from database for ${symbol}:`, error);
+      handleDbError('getOptionsChainFromDB', error);
+      return [];
+    }
+  }
+
+  async clearOptionsChainData(symbol: string): Promise<void> {
+    try {
+      console.log(`🗑️ Clearing options chain data from database for ${symbol}`);
+      await db.delete(optionsChains).where(eq(optionsChains.symbol, symbol));
+      console.log(`✅ Cleared options chain data for ${symbol}`);
+    } catch (error) {
+      console.error(`❌ Failed to clear options chain data for ${symbol}:`, error);
+      handleDbError('clearOptionsChainData', error);
+    }
+  }
+
+  async updateOptionsChainData(symbol: string, optionsData: any[]): Promise<void> {
+    try {
+      console.log(`🔄 Updating options chain data in database for ${symbol} with ${optionsData.length} options`);
+      
+      const chainRecords: InsertOptionsChain[] = [];
+      
+      // MarketData.app API returns individual option contracts, not grouped data
+      for (const option of optionsData) {
+        // Skip if option doesn't have required fields
+        if (!option.strike || !option.expiration_date || !option.contract_type) {
+          console.warn(`⚠️ Skipping invalid option:`, option);
+          continue;
+        }
+        
+        // Convert expiration_date from timestamp to YYYY-MM-DD format if needed
+        let expirationDate = option.expiration_date;
+        if (typeof expirationDate === 'number') {
+          // Convert timestamp to YYYY-MM-DD
+          expirationDate = new Date(expirationDate * 1000).toISOString().split('T')[0];
+        } else if (typeof expirationDate === 'string') {
+          // Ensure it's in YYYY-MM-DD format
+          if (expirationDate.includes('/')) {
+            const date = new Date(expirationDate);
+            expirationDate = date.toISOString().split('T')[0];
+          }
+        }
+        
+        console.log(`📅 Processing ${symbol} ${option.contract_type} strike ${option.strike} expiration ${expirationDate}`);
+        
+        chainRecords.push({
+          symbol,
+          expirationDate: expirationDate,
+          strike: option.strike,
+          optionType: option.contract_type, // 'call' or 'put'
+          bid: option.bid || 0,
+          ask: option.ask || 0,
+          lastPrice: option.last || 0,
+          volume: option.volume || 0,
+          openInterest: option.open_interest || 0,
+          impliedVolatility: option.implied_volatility || 0,
+          delta: option.delta || 0,
+          gamma: option.gamma || 0,
+          theta: option.theta || 0,
+          vega: option.vega || 0,
+        });
+      }
+      
+      if (chainRecords.length > 0) {
+        // Insert in batches to avoid query limits
+        const batchSize = 100;
+        for (let i = 0; i < chainRecords.length; i += batchSize) {
+          const batch = chainRecords.slice(i, i + batchSize);
+          await db.insert(optionsChains).values(batch);
+        }
+        console.log(`✅ Inserted ${chainRecords.length} options records into database for ${symbol}`);
+        
+        // Log unique expiration dates
+        const uniqueExpirations = [...new Set(chainRecords.map(r => r.expirationDate))].sort();
+        console.log(`📅 Unique expiration dates stored: ${uniqueExpirations.join(', ')}`);
+      } else {
+        console.warn(`⚠️ No options data to insert for ${symbol}`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ Failed to update options chain data for ${symbol}:`, error);
+      handleDbError('updateOptionsChainData', error);
+    }
+  }
+
+  async getAllActiveTickersAcrossAllUsers(): Promise<Ticker[]> {
+    try {
+      console.log('📊 Getting all active tickers across all users for optimized API calls...');
+      
+      const results = await db
+        .select()
+        .from(tickers)
+        .where(eq(tickers.isActive, true));
+      
+      console.log(`✅ Retrieved ${results.length} active tickers across all users`);
+      return results;
+    } catch (error) {
+      console.error('❌ Failed to get all active tickers across all users:', error);
+      handleDbError('getAllActiveTickersAcrossAllUsers', error);
     }
   }
 

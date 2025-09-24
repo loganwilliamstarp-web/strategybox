@@ -10,9 +10,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Auth state management
 let currentUser: any = null;
 let currentToken: string | null = null;
+let sessionInitialized = false;
+let sessionPromise: Promise<void> | null = null;
 
 // Initialize session on app startup
-(async () => {
+const initializeSession = async () => {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
@@ -24,8 +26,13 @@ let currentToken: string | null = null;
     }
   } catch (error) {
     console.error('❌ Failed to restore Supabase session:', error);
+  } finally {
+    sessionInitialized = true;
   }
-})();
+};
+
+// Start session initialization immediately
+sessionPromise = initializeSession();
 
 // Listen for auth state changes
 supabase.auth.onAuthStateChange((event, session) => {
@@ -38,7 +45,34 @@ supabase.auth.onAuthStateChange((event, session) => {
     currentToken = null;
     console.log('❌ Supabase auth state changed: user logged out');
   }
+  // Mark session as initialized when we get any auth state change
+  sessionInitialized = true;
 });
+
+// Wait for session initialization to complete
+export async function waitForSessionInitialization(): Promise<void> {
+  if (sessionInitialized) {
+    return;
+  }
+  
+  if (sessionPromise) {
+    await sessionPromise;
+  }
+  
+  // Double-check that we're initialized
+  if (!sessionInitialized) {
+    await new Promise(resolve => {
+      const checkInitialized = () => {
+        if (sessionInitialized) {
+          resolve(undefined);
+        } else {
+          setTimeout(checkInitialized, 10);
+        }
+      };
+      checkInitialized();
+    });
+  }
+}
 
 // Get current access token
 export function getAccessToken(): string | null {
@@ -132,6 +166,12 @@ export async function apiRequestWithAuth(url: string, options: RequestInit = {})
 
   console.log('🔍 Response status:', response.status);
   console.log('🔍 Response headers:', Object.fromEntries(response.headers.entries()));
+  
+  // Log response data for ticker endpoints
+  if (url.includes('/api/tickers') && !url.includes('/api/tickers/refresh-earnings')) {
+    const responseText = await response.clone().text();
+    console.log('🔍 Ticker API Response:', responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''));
+  }
 
   if (!response.ok) {
     if (response.status === 401) {

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase, getCurrentUser, getAccessToken, apiRequestWithAuth } from "@/lib/supabaseAuth";
+import { supabase, getCurrentUser, getAccessToken, apiRequestWithAuth, waitForSessionInitialization } from "@/lib/supabaseAuth";
 import { useState, useEffect } from "react";
 
 export function useAuth() {
@@ -9,6 +9,9 @@ export function useAuth() {
   // Check for existing session on mount
   useEffect(() => {
     const checkInitialAuth = async () => {
+      // Wait for session initialization to complete first
+      await waitForSessionInitialization();
+      
       const currentUser = getCurrentUser();
       const token = getAccessToken();
       console.log('🔍 Initial auth check:', { 
@@ -43,6 +46,9 @@ export function useAuth() {
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
       try {
+        // Wait for session initialization to complete first
+        await waitForSessionInitialization();
+        
         // First check if we have a current Supabase session
         const currentUser = getCurrentUser();
         const token = getAccessToken();
@@ -65,6 +71,7 @@ export function useAuth() {
     refetchOnWindowFocus: false,
     staleTime: Infinity, // Never consider stale - persist until logout
     gcTime: Infinity, // Keep in cache indefinitely
+    enabled: initialAuthCheck, // Only run query after initial auth check is complete
   });
 
   return {

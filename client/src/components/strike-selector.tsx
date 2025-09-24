@@ -14,6 +14,7 @@ interface StrikeSelectorProps {
   currentCallStrike: number;
   onStrikeChange: (putStrike: number, callStrike: number, putPremium: number, callPremium: number) => void;
   onCancel: () => void;
+  selectedExpiration?: string; // Add dashboard's selected expiration
 }
 
 interface OptionStrike {
@@ -57,26 +58,84 @@ export function StrikeSelector({
   currentPutStrike, 
   currentCallStrike, 
   onStrikeChange, 
-  onCancel 
+  onCancel,
+  selectedExpiration: dashboardExpiration
 }: StrikeSelectorProps) {
   const [selectedPutStrike, setSelectedPutStrike] = useState<number>(currentPutStrike);
   const [selectedCallStrike, setSelectedCallStrike] = useState<number>(currentCallStrike);
-  const [selectedExpiration, setSelectedExpiration] = useState<string>("");
+  const [selectedExpiration, setSelectedExpiration] = useState<string>(dashboardExpiration || "");
 
   const { data: optionsData, isLoading } = useQuery<OptionsChainData>({
-    queryKey: [`/api/market-data/options-chain/${symbol}`],
+    queryKey: selectedExpiration 
+      ? [`/api/options-chain/${symbol}?expiration=${selectedExpiration}`]
+      : [`/api/options-chain/${symbol}`],
     enabled: !!symbol,
-    refetchInterval: 15 * 60 * 1000, // Refresh every 15 minutes to match premium updates
-    staleTime: 5 * 60 * 1000, // Consider stale after 5 minutes
+    refetchInterval: 0, // NO automatic refetching - database updates every 15 minutes
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    retry: 1, // Only retry once on failure
+    retryDelay: 1000, // Wait 1 second before retry
   });
 
   useEffect(() => {
-    if (optionsData && optionsData.expirationDates.length > 0 && !selectedExpiration) {
+    console.log('🔍 StrikeSelector: optionsData received:', optionsData);
+    console.log('🔍 StrikeSelector: dashboardExpiration:', dashboardExpiration);
+    console.log('🔍 StrikeSelector: selectedExpiration:', selectedExpiration);
+    
+    if (optionsData) {
+      console.log('🔍 StrikeSelector: expirationDates:', optionsData.expirationDates);
+      console.log('🔍 StrikeSelector: chains:', optionsData.chains);
+      console.log('🔍 StrikeSelector: options count:', optionsData.options?.length || 0);
+      console.log('🔍 StrikeSelector: sample options:', optionsData.options?.slice(0, 3) || []);
+      
+      // Show what expiration dates are actually in the options
+      if (optionsData.options && optionsData.options.length > 0) {
+        const actualExpirations = [...new Set(optionsData.options.map(opt => opt.expiration_date))].sort();
+        console.log('🔍 StrikeSelector: ACTUAL expiration dates in options:', actualExpirations);
+        console.log('🔍 StrikeSelector: Requested expiration:', selectedExpiration);
+        console.log('🔍 StrikeSelector: Does requested expiration exist?', actualExpirations.includes(selectedExpiration));
+        
+        // Show sample options to see what expiration dates are actually there
+        const sampleOptions = optionsData.options.slice(0, 5);
+        console.log('🔍 StrikeSelector: Sample options with expiration dates:', sampleOptions.map(opt => ({
+          strike: opt.strike,
+          contract_type: opt.contract_type,
+          expiration_date: opt.expiration_date
+        })));
+      }
+    }
+    
+    // ALWAYS sync with dashboard expiration if provided - this should take priority
+    if (dashboardExpiration) {
+      console.log('🔍 StrikeSelector: Dashboard expiration provided:', dashboardExpiration);
+      if (dashboardExpiration !== selectedExpiration) {
+        console.log('🔍 StrikeSelector: Syncing with dashboard expiration:', dashboardExpiration);
+        setSelectedExpiration(dashboardExpiration);
+      }
+      return; // Don't fall back to API data if dashboard provides expiration
+    }
+    
+    // Only default to API data if no dashboard expiration is provided
+    if (!dashboardExpiration && optionsData && optionsData.expirationDates && optionsData.expirationDates.length > 0 && !selectedExpiration) {
       // Deduplicate expiration dates and default to first (usually nearest)
       const uniqueExpirations = Array.from(new Set(optionsData.expirationDates));
+      console.log('🔍 StrikeSelector: No dashboard expiration, setting selectedExpiration to:', uniqueExpirations[0]);
       setSelectedExpiration(uniqueExpirations[0]);
     }
-  }, [optionsData, selectedExpiration]);
+  }, [optionsData, selectedExpiration, dashboardExpiration]);
+
+  // Filter options by selected expiration date
+  const filteredOptions = optionsData && selectedExpiration 
+    ? optionsData.options?.filter(option => option.expiration_date === selectedExpiration) || []
+    : optionsData?.options || [];
+
+  // Get filtered calls and puts for the selected expiration
+  const filteredCalls = filteredOptions.filter(option => option.contract_type === 'call').sort((a, b) => a.strike - b.strike);
+  const filteredPuts = filteredOptions.filter(option => option.contract_type === 'put').sort((a, b) => a.strike - b.strike);
+
+  // Debug logging for filtering
+  console.log(`🔍 StrikeSelector: Selected expiration ${selectedExpiration}, filtered options: ${filteredOptions.length} (${filteredCalls.length} calls, ${filteredPuts.length} puts)`);
+  console.log(`🔍 StrikeSelector: Dashboard expiration: ${dashboardExpiration}, API expiration dates:`, optionsData?.expirationDates);
 
   if (isLoading) {
     return (
@@ -102,13 +161,60 @@ export function StrikeSelector({
     );
   }
 
-  const chainData = optionsData.chains[selectedExpiration];
-  if (!chainData) {
+  if (!filteredOptions.length || !optionsData?.expirationDates) {
+    const availableExpirations = optionsData?.expirationDates || [];
     return (
-      <Card className="p-6">
-        <div className="text-center text-muted-foreground">
-          <p>No options available for selected expiration</p>
-          <Button variant="outline" onClick={onCancel} className="mt-4">
+      <Card className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Select Strike Prices - {symbol}</h3>
+          <Badge variant="outline">Current: ${currentPrice.toFixed(2)}</Badge>
+        </div>
+
+        {/* Expiration Selection */}
+        <div className="space-y-2">
+          <Label>Expiration Date</Label>
+          {dashboardExpiration ? (
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary" className="text-sm">
+                {new Date(dashboardExpiration).toLocaleDateString()} ({Math.ceil((new Date(dashboardExpiration).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days)
+              </Badge>
+              <span className="text-xs text-muted-foreground">(From Dashboard)</span>
+            </div>
+          ) : (
+            <Select value={selectedExpiration} onValueChange={setSelectedExpiration}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select expiration" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableExpirations.map((date: string, i: number) => (
+                  <SelectItem key={`${date}-${i}`} value={date}>
+                    {new Date(date).toLocaleDateString()} ({Math.ceil((new Date(date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
+        {/* No Options Available Message */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+            <h4 className="font-medium text-yellow-800">No Options Available</h4>
+          </div>
+          <p className="text-sm text-yellow-700 mt-2">
+            No options are available for <strong>{selectedExpiration ? new Date(selectedExpiration).toLocaleDateString() : 'selected expiration'}</strong>.
+            {availableExpirations.length > 0 && (
+              <>
+                <br />
+                Available expirations: {availableExpirations.map(date => new Date(date).toLocaleDateString()).join(', ')}
+              </>
+            )}
+          </p>
+        </div>
+
+        <div className="flex justify-end space-x-2">
+          <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
         </div>
@@ -117,7 +223,7 @@ export function StrikeSelector({
   }
 
   // Filter and format puts - Include more strikes around current price for better selection
-  let puts: OptionStrike[] = chainData.puts
+  let puts: OptionStrike[] = filteredPuts
     .filter((put: any) => {
       // Include strikes within 20% of current price (both above and below)
       const priceRange = currentPrice * 0.2;
@@ -141,7 +247,7 @@ export function StrikeSelector({
     .sort((a: any, b: any) => b.strike - a.strike); // Highest strike first
 
   // Filter and format calls - Include more strikes around current price for better selection
-  let calls: OptionStrike[] = chainData.calls
+  let calls: OptionStrike[] = filteredCalls
     .filter((call: any) => {
       // Include strikes within 20% of current price (both above and below)
       const priceRange = currentPrice * 0.2;
@@ -171,13 +277,15 @@ export function StrikeSelector({
 
   if (!currentPutExists && currentPutStrike) {
     // Add the manually selected put strike as an option
-    const putFromApi = chainData.puts.find((p: any) => p.strike === currentPutStrike);
+    const putFromApi = optionsData?.options?.find((opt: any) => 
+      opt.contract_type === 'put' && opt.strike === currentPutStrike
+    );
     if (putFromApi) {
       puts.push({
         strike: putFromApi.strike,
         bid: putFromApi.bid || 0,
         ask: putFromApi.ask || 0,
-        premium: putFromApi.bid && putFromApi.ask ? (putFromApi.bid + putFromApi.ask) / 2 : 0,
+        premium: putFromApi.bid && putFromApi.ask ? (putFromApi.bid + putFromApi.ask) / 2 : putFromApi.last || 0,
         volume: putFromApi.volume || 0,
         openInterest: putFromApi.openInterest || 0,
         delta: putFromApi.delta,
@@ -188,13 +296,15 @@ export function StrikeSelector({
 
   if (!currentCallExists && currentCallStrike) {
     // Add the manually selected call strike as an option
-    const callFromApi = chainData.calls.find((c: any) => c.strike === currentCallStrike);
+    const callFromApi = optionsData?.options?.find((opt: any) => 
+      opt.contract_type === 'call' && opt.strike === currentCallStrike
+    );
     if (callFromApi) {
       calls.push({
         strike: callFromApi.strike,
         bid: callFromApi.bid || 0,
         ask: callFromApi.ask || 0,
-        premium: callFromApi.bid && callFromApi.ask ? (callFromApi.bid + callFromApi.ask) / 2 : 0,
+        premium: callFromApi.bid && callFromApi.ask ? (callFromApi.bid + callFromApi.ask) / 2 : callFromApi.last || 0,
         volume: callFromApi.volume || 0,
         openInterest: callFromApi.openInterest || 0,
         delta: callFromApi.delta,
@@ -245,19 +355,42 @@ export function StrikeSelector({
       {/* Expiration Selection */}
       <div className="space-y-2">
         <Label>Expiration Date</Label>
-        <Select value={selectedExpiration} onValueChange={setSelectedExpiration}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select expiration" />
-          </SelectTrigger>
-          <SelectContent>
-            {Array.from(new Set(optionsData.expirationDates)).map((date: string, i: number) => (
-              <SelectItem key={`${date}-${i}`} value={date}>
-                {new Date(date).toLocaleDateString()} ({Math.ceil((new Date(date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days)
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {dashboardExpiration ? (
+          // Show dashboard expiration as read-only when provided
+          <div className="flex items-center space-x-2">
+            <Badge variant="secondary" className="text-sm">
+              {new Date(dashboardExpiration).toLocaleDateString()} ({Math.ceil((new Date(dashboardExpiration).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days)
+            </Badge>
+            <span className="text-xs text-muted-foreground">(From Dashboard)</span>
+          </div>
+        ) : (
+          // Allow selection only when no dashboard expiration is provided
+          <Select value={selectedExpiration} onValueChange={setSelectedExpiration}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select expiration" />
+            </SelectTrigger>
+            <SelectContent>
+              {optionsData?.expirationDates && Array.from(new Set(optionsData.expirationDates)).map((date: string, i: number) => (
+                <SelectItem key={`${date}-${i}`} value={date}>
+                  {new Date(date).toLocaleDateString()} ({Math.ceil((new Date(date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days)
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
+
+      {/* Debug Information */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-muted p-3 rounded-lg text-xs space-y-1">
+          <div><strong>Debug Info:</strong></div>
+          <div>Dashboard Expiration: {dashboardExpiration || 'None'}</div>
+          <div>Selected Expiration: {selectedExpiration || 'None'}</div>
+          <div>Available API Expirations: {optionsData?.expirationDates?.join(', ') || 'None'}</div>
+          <div>Filtered Options Count: {filteredOptions.length}</div>
+          <div>Calls: {filteredCalls.length}, Puts: {filteredPuts.length}</div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Call Strike Selection - Showing call data */}

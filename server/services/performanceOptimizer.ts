@@ -121,20 +121,11 @@ export class PerformanceOptimizer {
   }
 
   /**
-   * Get cached options data or fetch if stale
+   * Get options data - ALWAYS fetch fresh from API and save to database (no caching)
    */
   async getOptionsData(symbol: string, expirationDate?: string): Promise<any | null> {
-    const cacheKey = `${symbol}:${expirationDate || 'all'}`;
-    const cached = this.optionsCache.get(cacheKey);
-    
-    // Check cache first - use 30 minute cache for options (less frequent changes)
-    if (cached && Date.now() - cached.timestamp < this.OPTIONS_CACHE_DURATION) {
-      console.log(`📋 Using cached options data for ${symbol} (${Math.floor((Date.now() - cached.timestamp) / 60000)}min old)`);
-      return cached.data;
-    }
-
     try {
-      console.log(`🔄 Fetching fresh options data for ${symbol}...`);
+      console.log(`🔄 Fetching fresh options data for ${symbol} (no caching - database-only)...`);
       const { optionsApiService } = await import('../optionsApiService');
       
       let optionsData;
@@ -145,16 +136,8 @@ export class PerformanceOptimizer {
       }
 
       if (optionsData) {
-        // Cache the fresh data
-        this.optionsCache.set(cacheKey, {
-          symbol,
-          data: optionsData,
-          timestamp: Date.now(),
-          expirationDate
-        });
-
-        // AUTOMATICALLY SAVE TO DATABASE (for comprehensive chains only)
-        if (!expirationDate && optionsData.chains) {
+        // ALWAYS SAVE TO DATABASE (for comprehensive chains only)
+        if (!expirationDate && optionsData.options) {
           try {
             const { storage } = await import('../storage');
             await storage.saveOptionsChain(symbol, optionsData);
@@ -164,15 +147,14 @@ export class PerformanceOptimizer {
           }
         }
         
-        console.log(`✅ Cached fresh options data for ${symbol}`);
+        console.log(`✅ Retrieved fresh options data for ${symbol} from API`);
         return optionsData;
       }
     } catch (error) {
       console.error(`Failed to fetch options data for ${symbol}:`, error);
     }
 
-    // Return stale cache if available
-    return cached?.data || null;
+    return null;
   }
 
   /**

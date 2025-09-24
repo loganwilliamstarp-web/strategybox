@@ -106,9 +106,33 @@ export function registerRefreshRoutes(app: Express): void {
         const { marketDataApiService } = await import('../marketDataApi');
         console.log(`🧹 Clearing MarketData API cache for fresh data...`);
         marketDataApiService.clearCache();
-        console.log(`✅ Cache cleared - now recalculating positions with fresh MarketData.app IV data`);
+        console.log(`✅ Cache cleared - now updating stock prices and recalculating positions with fresh MarketData.app IV data`);
         
-        // Force recalculation of all positions with real IV data
+        // First, update stock prices with fresh market data
+        console.log(`💰 Updating stock prices with fresh market data...`);
+        
+        for (const ticker of tickers) {
+          try {
+            console.log(`🔄 Updating stock price for ${ticker.symbol}...`);
+            
+            // Get fresh stock quote
+            const quote = await marketDataApiService.getStockQuote(ticker.symbol);
+            if (quote) {
+              // Update ticker with fresh price data
+              await storage.updateTicker(ticker.id, {
+                currentPrice: quote.currentPrice,
+                priceChange: quote.change || 0,
+                priceChangePercent: quote.changePercent || 0,
+              });
+              
+              console.log(`✅ Updated ${ticker.symbol} price: $${quote.currentPrice} (${quote.change >= 0 ? '+' : ''}${quote.changePercent}%)`);
+            }
+          } catch (error) {
+            console.error(`❌ Error updating stock price for ${ticker.symbol}:`, error);
+          }
+        }
+        
+        // Then, force recalculation of all positions with real IV data
         for (const ticker of tickers) {
           if (!ticker.position) continue;
           
@@ -157,6 +181,15 @@ export function registerRefreshRoutes(app: Express): void {
               });
               
               console.log(`✅ Updated ${ticker.symbol}: IV=${marketData.impliedVolatility.toFixed(1)}%, Days=${correctDaysToExpiry}d, ATM=${ticker.currentPrice}`);
+              
+              // Send WebSocket update for options data refresh
+              try {
+                const { performanceOptimizer } = await import('../services/performanceOptimizer');
+                performanceOptimizer.refreshSymbol(ticker.symbol, true);
+                console.log(`📡 Sent WebSocket options update for ${ticker.symbol}`);
+              } catch (wsError) {
+                console.error(`❌ Failed to send WebSocket update for ${ticker.symbol}:`, wsError);
+              }
             }
           } catch (error) {
             console.error(`❌ Error recalculating ${ticker.symbol}:`, error);

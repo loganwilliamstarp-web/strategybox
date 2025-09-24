@@ -40,12 +40,16 @@ interface TickerCardProps {
   ticker: TickerWithPosition;
   onViewOptions?: (symbol: string) => void;
   onViewVolatilitySurface?: (symbol: string) => void;
+  selectedExpiration?: string; // Dashboard's selected expiration
 }
 
-const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolatilitySurface }: TickerCardProps) {
+const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolatilitySurface, selectedExpiration }: TickerCardProps) {
   const { position } = ticker;
   const isPositiveChange = ticker.priceChange >= 0;
   const { isNative, triggerHaptics } = useCapacitor();
+  
+  // Debug component re-renders
+  console.log(`🔄 TickerCard re-render for ${ticker.symbol} at ${new Date().toISOString()}`);
 
   
   // Fetch individual IV values for the specific strikes
@@ -55,7 +59,7 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
   useEffect(() => {
     const fetchIndividualIV = async () => {
       try {
-        const chainData = await apiRequestWithAuth(`/api/market-data/options-chain/${ticker.symbol}?expiration=${position.expirationDate}`);
+        const chainData = await apiRequestWithAuth(`/api/options-chain/${ticker.symbol}?expiration=${position.expirationDate}`);
         
         if (chainData) {
           const expiration = position.expirationDate;
@@ -95,6 +99,16 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
     longCallStrike: position?.longCallStrike,
     shortPutStrike: position?.shortPutStrike,
     shortCallStrike: position?.shortCallStrike
+  });
+  
+  // Debug price data
+  console.log(`💰 Price Debug for ${ticker.symbol}:`, {
+    currentPrice: ticker.currentPrice,
+    priceChange: ticker.priceChange,
+    priceChangePercent: ticker.priceChangePercent,
+    lastUpdated: ticker.updatedAt,
+    tickerId: ticker.id,
+    timestamp: new Date().toISOString()
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -209,8 +223,13 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
     },
     onSettled: () => {
       // Always refetch after error or success to ensure server state
+      console.log('🔄 Strike update completed - refreshing database data');
+      // Only invalidate specific queries, don't remove all options chain data
       queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
+      // Force immediate refetch
+      queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
+      queryClient.refetchQueries({ queryKey: ["/api/portfolio/summary"] });
     },
   });
 
@@ -240,7 +259,7 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
   // Check for premium discrepancies by fetching fresh options data
   // PERFORMANCE FIX: Disable per-card polling, use global WebSocket updates instead
   const { data: freshOptionsData } = useQuery({
-    queryKey: ["/api/market-data/options-chain", ticker.symbol],
+    queryKey: ["/api/options-chain", ticker.symbol],
     enabled: !!ticker.symbol && !!position && showStrikeSelector, // Only fetch when needed
     refetchInterval: false, // Disable automatic polling for performance
     staleTime: 5 * 60 * 1000, // Consider stale after 5 minutes
@@ -740,12 +759,47 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
               currentCallStrike={position.longCallStrike}
               onStrikeChange={handleStrikeSelectionChange}
               onCancel={() => setShowStrikeSelector(false)}
+              selectedExpiration={selectedExpiration}
             />
           </div>
         </div>
       )}
     </Card>
   );
+}, (prevProps, nextProps) => {
+  // Custom comparison to ensure re-render when ticker data changes
+  const prevTicker = prevProps.ticker;
+  const nextTicker = nextProps.ticker;
+  
+  // Compare key ticker properties that should trigger re-render
+  const tickerChanged = 
+    prevTicker.currentPrice !== nextTicker.currentPrice ||
+    prevTicker.priceChange !== nextTicker.priceChange ||
+    prevTicker.priceChangePercent !== nextTicker.priceChangePercent ||
+    prevTicker.updatedAt !== nextTicker.updatedAt ||
+    prevTicker.id !== nextTicker.id;
+  
+  if (tickerChanged) {
+    console.log(`🔄 TickerCard memo: ${nextTicker.symbol} data changed, re-rendering`);
+    return false; // Re-render
+  }
+  
+  // Compare position data
+  const prevPosition = prevTicker.position;
+  const nextPosition = nextTicker.position;
+  const positionChanged = 
+    prevPosition.longPutStrike !== nextPosition.longPutStrike ||
+    prevPosition.longCallStrike !== nextPosition.longCallStrike ||
+    prevPosition.longPutPremium !== nextPosition.longPutPremium ||
+    prevPosition.longCallPremium !== nextPosition.longCallPremium;
+  
+  if (positionChanged) {
+    console.log(`🔄 TickerCard memo: ${nextTicker.symbol} position changed, re-rendering`);
+    return false; // Re-render
+  }
+  
+  // No changes, skip re-render
+  return true;
 });
 
 export { TickerCard };

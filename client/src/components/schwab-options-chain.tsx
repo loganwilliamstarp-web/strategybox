@@ -42,11 +42,25 @@ interface SchwabOptionsChainProps {
 }
 
 export function SchwabOptionsChain({ symbol, isOpen, onClose, selectedExpiration: dashboardExpiration, onExpirationChange, testId = "schwab-options-chain" }: SchwabOptionsChainProps) {
+  // Don't render anything if modal is closed or no symbol
+  if (!isOpen || !symbol) {
+    return null;
+  }
+  
   const [optionsData, setOptionsData] = useState<OptionsChainData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [selectedExpiration, setSelectedExpiration] = useState<string>("");
+  const [selectedExpiration, setSelectedExpiration] = useState<string>(dashboardExpiration || "");
   const [expandedExpirations, setExpandedExpirations] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState<string>("");
+
+  // Initialize with dashboard expiration
+  useEffect(() => {
+    if (dashboardExpiration) {
+      console.log(`📅 SchwabOptionsChain initializing with dashboard expiration: ${dashboardExpiration}`);
+      setSelectedExpiration(dashboardExpiration);
+      setExpandedExpirations(new Set([dashboardExpiration]));
+    }
+  }, [dashboardExpiration]);
 
   // Sync with dashboard expiration selection
   useEffect(() => {
@@ -65,7 +79,12 @@ export function SchwabOptionsChain({ symbol, isOpen, onClose, selectedExpiration
     
     setLoading(true);
     try {
-      const chainData = await apiRequestWithAuth(`/api/market-data/options-chain/${symbol}`);
+      // Fetch options chain with selected expiration if available
+      const url = selectedExpiration 
+        ? `/api/options-chain/${symbol}?expiration=${selectedExpiration}`
+        : `/api/options-chain/${symbol}`;
+      
+      const chainData = await apiRequestWithAuth(url);
       if (chainData) {
         setOptionsData(chainData);
         

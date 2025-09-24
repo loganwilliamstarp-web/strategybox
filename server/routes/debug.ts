@@ -603,6 +603,247 @@ export function setupDebugRoutes(app: Express) {
     }
   });
 
+  // Debug AAPL options data issue
+  app.get("/api/debug/aapl-options-debug", async (req: any, res) => {
+    try {
+      const symbol = 'AAPL';
+      console.log(`🔍 Debugging AAPL options data issue...`);
+      
+      // Step 1: Check what's in database
+      const allData = await storage.getOptionsChainFromDB(symbol);
+      console.log(`📊 Total AAPL options in database: ${allData.length}`);
+      
+      if (allData.length > 0) {
+        const expirations = [...new Set(allData.map(r => r.expirationDate))].sort();
+        console.log(`📅 Available expirations: ${expirations.join(', ')}`);
+        
+        // Step 2: Test specific expiration queries
+        const expirationTests = {};
+        for (const exp of expirations.slice(0, 3)) { // Test first 3 expirations
+          const filteredData = await storage.getOptionsChainFromDB(symbol, exp);
+          expirationTests[exp] = {
+            count: filteredData.length,
+            calls: filteredData.filter(o => o.optionType === 'call').length,
+            puts: filteredData.filter(o => o.optionType === 'put').length
+          };
+        }
+        
+        // Step 3: Test API endpoint
+        const apiResponse = await fetch(`http://localhost:5001/api/options-chain/${symbol}`, {
+          headers: { 'Cookie': req.headers.cookie || '' }
+        });
+        const apiData = await apiResponse.json();
+        
+        const result = {
+          symbol,
+          databaseStatus: {
+            totalOptions: allData.length,
+            availableExpirations: expirations,
+            expirationTests: expirationTests
+          },
+          apiStatus: {
+            responseOk: apiResponse.ok,
+            statusCode: apiResponse.status,
+            optionsCount: apiData.options?.length || 0,
+            apiExpirations: apiData.expirationDates || [],
+            error: apiData.error || null
+          },
+          sampleData: {
+            firstOption: allData[0] || null,
+            apiFirstOption: apiData.options?.[0] || null
+          }
+        };
+        
+        console.log(`✅ AAPL debug completed:`, result);
+        res.json(result);
+        
+      } else {
+        // No data in database, try to populate
+        console.log(`🔄 No AAPL data in database, attempting to populate...`);
+        
+        const { optionsApiService } = await import('../optionsApiService');
+        const freshOptionsChain = await optionsApiService.getOptionsChain(symbol);
+        
+        if (freshOptionsChain && freshOptionsChain.options && freshOptionsChain.options.length > 0) {
+          console.log(`📊 Got ${freshOptionsChain.options.length} options from API`);
+          await storage.saveOptionsChain(symbol, freshOptionsChain);
+          
+          // Retry database query
+          const newData = await storage.getOptionsChainFromDB(symbol);
+          const newExpirations = [...new Set(newData.map(r => r.expirationDate))].sort();
+          
+          res.json({
+            symbol,
+            action: 'populated_from_api',
+            apiOptions: freshOptionsChain.options.length,
+            databaseOptions: newData.length,
+            expirations: newExpirations,
+            sampleOption: newData[0] || null
+          });
+        } else {
+          res.json({
+            symbol,
+            action: 'no_api_data',
+            error: 'No options data available from API'
+          });
+        }
+      }
+      
+    } catch (error) {
+      console.error(`❌ AAPL debug failed:`, error);
+      res.status(500).json({
+        error: "AAPL debug failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Test expiration date filtering
+  app.get("/api/debug/test-expiration-filtering/:symbol", async (req: any, res) => {
+    try {
+      const symbol = req.params.symbol.toUpperCase();
+      const testExpiration = req.query.expiration as string;
+      
+      console.log(`🧪 Testing expiration date filtering for ${symbol}${testExpiration ? ` with expiration ${testExpiration}` : ''}`);
+      
+      // Test 1: Get all options data
+      const allOptions = await storage.getOptionsChainFromDB(symbol);
+      console.log(`📊 Total options in database: ${allOptions.length}`);
+      
+      // Test 2: Get filtered options by expiration
+      const filteredOptions = testExpiration 
+        ? await storage.getOptionsChainFromDB(symbol, testExpiration)
+        : allOptions;
+      
+      console.log(`📊 Filtered options: ${filteredOptions.length}`);
+      
+      // Test 3: Test API endpoint
+      const apiUrl = testExpiration 
+        ? `/api/options-chain/${symbol}?expiration=${testExpiration}`
+        : `/api/options-chain/${symbol}`;
+      
+      const apiResponse = await fetch(`http://localhost:5000${apiUrl}`, {
+        headers: { 'Cookie': req.headers.cookie || '' }
+      });
+      const apiData = await apiResponse.json();
+      
+      // Test 4: Analyze expiration dates
+      const uniqueExpirations = [...new Set(allOptions.map(r => r.expirationDate))].sort();
+      const apiExpirations = apiData.expirationDates || [];
+      
+      const result = {
+        symbol,
+        testExpiration,
+        databaseTest: {
+          totalOptions: allOptions.length,
+          filteredOptions: filteredOptions.length,
+          uniqueExpirations: uniqueExpirations,
+          filteredByExpiration: testExpiration ? filteredOptions.every(opt => opt.expirationDate === testExpiration) : true
+        },
+        apiTest: {
+          endpoint: apiUrl,
+          responseOk: apiResponse.ok,
+          optionsCount: apiData.options?.length || 0,
+          expirationDates: apiExpirations,
+          filteredCorrectly: testExpiration ? apiData.options?.every((opt: any) => opt.expiration_date === testExpiration) : true
+        },
+        sampleData: {
+          firstOption: filteredOptions[0] || null,
+          apiFirstOption: apiData.options?.[0] || null,
+          expirationMatch: testExpiration ? filteredOptions[0]?.expirationDate === testExpiration : true
+        }
+      };
+      
+      console.log(`✅ Expiration filtering test completed for ${symbol}:`, result);
+      res.json(result);
+      
+    } catch (error) {
+      console.error(`❌ Expiration filtering test failed for ${req.params.symbol}:`, error);
+      res.status(500).json({
+        error: "Expiration filtering test failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Test options chain database storage and retrieval
+  app.get("/api/debug/test-options-chain/:symbol", async (req: any, res) => {
+    try {
+      const symbol = req.params.symbol.toUpperCase();
+      console.log(`🧪 Testing options chain database storage for ${symbol}`);
+      
+      // Step 1: Clear existing data
+      await storage.clearOptionsChainData(symbol);
+      console.log(`🗑️ Cleared existing data for ${symbol}`);
+      
+      // Step 2: Fetch fresh data from API
+      const { optionsApiService } = await import('../optionsApiService');
+      const freshOptionsChain = await optionsApiService.getOptionsChain(symbol);
+      
+      if (!freshOptionsChain || !freshOptionsChain.options || freshOptionsChain.options.length === 0) {
+        return res.status(404).json({
+          error: "No options data available from API",
+          message: `No options chain data found for ${symbol} from external API`
+        });
+      }
+      
+      console.log(`📊 Fetched ${freshOptionsChain.options.length} options from API for ${symbol}`);
+      
+      // Step 3: Save to database
+      await storage.saveOptionsChain(symbol, freshOptionsChain);
+      console.log(`💾 Saved options chain to database for ${symbol}`);
+      
+      // Step 4: Retrieve from database
+      const dbData = await storage.getOptionsChainFromDB(symbol);
+      console.log(`📋 Retrieved ${dbData.length} options from database for ${symbol}`);
+      
+      // Step 5: Test API endpoint
+      const apiResponse = await fetch(`http://localhost:5000/api/options-chain/${symbol}`, {
+        headers: { 'Cookie': req.headers.cookie || '' }
+      });
+      const apiData = await apiResponse.json();
+      
+      // Step 6: Compare data
+      const uniqueExpirations = [...new Set(dbData.map(r => r.expirationDate))].sort();
+      const apiExpirations = apiData.expirationDates || [];
+      
+      const result = {
+        symbol,
+        testSteps: {
+          clearedExistingData: true,
+          fetchedFromAPI: freshOptionsChain.options.length,
+          savedToDatabase: dbData.length,
+          retrievedFromDatabase: dbData.length,
+          apiEndpointWorking: apiResponse.ok,
+          apiResponseOptions: apiData.options?.length || 0
+        },
+        dataIntegrity: {
+          uniqueExpirations: uniqueExpirations,
+          apiExpirations: apiExpirations,
+          expirationMatch: JSON.stringify(uniqueExpirations) === JSON.stringify(apiExpirations),
+          totalOptions: dbData.length,
+          callsCount: dbData.filter(o => o.optionType === 'call').length,
+          putsCount: dbData.filter(o => o.optionType === 'put').length
+        },
+        sampleData: {
+          firstOption: dbData[0] || null,
+          lastOption: dbData[dbData.length - 1] || null,
+          apiSample: apiData.options?.[0] || null
+        }
+      };
+      
+      console.log(`✅ Options chain test completed for ${symbol}:`, result);
+      res.json(result);
+      
+    } catch (error) {
+      console.error(`❌ Options chain test failed for ${req.params.symbol}:`, error);
+      res.status(500).json({
+        error: "Options chain test failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Populate options chain table with fresh market data
   app.post("/api/debug/populate-options-chains", async (req: any, res) => {
     try {
@@ -928,6 +1169,662 @@ export function setupDebugRoutes(app: Express) {
       res.status(500).json({ 
         error: 'Failed to fix ATM values', 
         details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  // Debug MarketData.app API response for specific expiration
+  app.get("/api/debug/marketdata-response/:symbol/:expiration", async (req: any, res) => {
+    try {
+      const symbol = req.params.symbol.toUpperCase();
+      const expiration = req.params.expiration;
+      console.log(`🔍 Debugging MarketData.app response for ${symbol} expiration ${expiration}...`);
+      
+      const { optionsApiService } = await import('../optionsApiService');
+      
+      // Test getOptionsChainSnapshot
+      console.log(`🔄 Testing getOptionsChainSnapshot for ${symbol} ${expiration}...`);
+      const snapshotData = await optionsApiService.getOptionsChainSnapshot(symbol, expiration);
+      
+      console.log(`📊 Snapshot response:`, {
+        length: snapshotData?.length || 0,
+        firstOption: snapshotData?.[0] || null,
+        sampleExpirations: snapshotData?.slice(0, 5).map(opt => opt.expiration_date) || []
+      });
+      
+      // Test getOptionsChain (comprehensive)
+      console.log(`🔄 Testing getOptionsChain for ${symbol}...`);
+      const comprehensiveData = await optionsApiService.getOptionsChain(symbol);
+      
+      console.log(`📊 Comprehensive response:`, {
+        symbol: comprehensiveData?.symbol,
+        optionsCount: comprehensiveData?.options?.length || 0,
+        expirationDates: comprehensiveData?.expirationDates || [],
+        firstOption: comprehensiveData?.options?.[0] || null
+      });
+      
+      res.json({
+        symbol,
+        requestedExpiration: expiration,
+        snapshotTest: {
+          success: !!snapshotData,
+          count: snapshotData?.length || 0,
+          firstOption: snapshotData?.[0] || null,
+          sampleExpirations: snapshotData?.slice(0, 5).map(opt => opt.expiration_date) || []
+        },
+        comprehensiveTest: {
+          success: !!comprehensiveData,
+          optionsCount: comprehensiveData?.options?.length || 0,
+          expirationDates: comprehensiveData?.expirationDates || [],
+          firstOption: comprehensiveData?.options?.[0] || null
+        }
+      });
+      
+    } catch (error) {
+      console.error(`❌ MarketData debug failed:`, error);
+      res.status(500).json({
+        error: "MarketData debug failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get ALL data from MarketData.app with NO filters
+  app.get("/api/debug/marketdata-raw-all/:symbol", async (req: any, res) => {
+    try {
+      const symbol = req.params.symbol.toUpperCase();
+      console.log(`🔍 Getting ALL RAW data from MarketData.app for ${symbol} with NO filters...`);
+      
+      const { marketDataApiService } = await import('../marketDataApi');
+      
+      // Test multiple API endpoints with different parameters to get ALL possible data
+      const tests = [
+        { 
+          name: 'NO LIMITS - Raw API call', 
+          url: `/v1/options/chain/${symbol}/`,
+          description: 'No strike or date limits - get everything'
+        },
+        { 
+          name: 'HIGH LIMITS - 1000 strikes, 365 days', 
+          url: `/v1/options/chain/${symbol}/?strikeLimit=1000&dateLimit=365`,
+          description: 'Very high limits to get maximum data'
+        },
+        { 
+          name: 'MEDIUM LIMITS - 500 strikes, 180 days', 
+          url: `/v1/options/chain/${symbol}/?strikeLimit=500&dateLimit=180`,
+          description: 'Medium limits'
+        },
+        { 
+          name: 'CURRENT LIMITS - 200 strikes, no dateLimit', 
+          url: `/v1/options/chain/${symbol}/?strikeLimit=200`,
+          description: 'Current implementation (no dateLimit)'
+        },
+        { 
+          name: 'OLD LIMITS - 200 strikes, 50 days', 
+          url: `/v1/options/chain/${symbol}/?strikeLimit=200&dateLimit=50`,
+          description: 'Previous implementation with dateLimit=50'
+        }
+      ];
+      
+      const results = {};
+      
+      for (const test of tests) {
+        try {
+          console.log(`🔄 Testing: ${test.name} - ${test.description}`);
+          console.log(`   URL: ${test.url}`);
+          
+          const testData = await marketDataApiService.makeRequest(test.url);
+          
+          if (testData && testData.optionSymbol && testData.optionSymbol.length > 0) {
+            // Extract ALL unique expiration dates
+            const uniqueExpirations = [...new Set(testData.expiration.map(ts => {
+              const date = new Date(ts * 1000);
+              return date.toISOString().split('T')[0];
+            }))].sort();
+            
+            // Count options per expiration
+            const expirationCounts = {};
+            for (let i = 0; i < testData.optionSymbol.length; i++) {
+              const expDate = new Date(testData.expiration[i] * 1000).toISOString().split('T')[0];
+              expirationCounts[expDate] = (expirationCounts[expDate] || 0) + 1;
+            }
+            
+            // Check for specific dates we're looking for
+            const targetDates = ['2025-09-26', '2025-09-25', '2025-09-27', '2025-10-03', '2025-10-17'];
+            const foundTargetDates = targetDates.filter(date => uniqueExpirations.includes(date));
+            
+            results[test.name] = {
+              success: true,
+              totalOptions: testData.optionSymbol.length,
+              totalExpirations: uniqueExpirations.length,
+              expirationDates: uniqueExpirations,
+              expirationCounts: expirationCounts,
+              has20250926: uniqueExpirations.includes('2025-09-26'),
+              foundTargetDates: foundTargetDates,
+              sampleOptions: testData.optionSymbol.slice(0, 10).map((symbol, i) => ({
+                optionSymbol: symbol,
+                strike: testData.strike[i],
+                side: testData.side[i],
+                expiration: new Date(testData.expiration[i] * 1000).toISOString().split('T')[0],
+                bid: testData.bid[i],
+                ask: testData.ask[i]
+              }))
+            };
+            
+            console.log(`✅ ${test.name}: ${testData.optionSymbol.length} options across ${uniqueExpirations.length} expirations`);
+            console.log(`   Expirations: ${uniqueExpirations.join(', ')}`);
+            console.log(`   Has 2025-09-26: ${uniqueExpirations.includes('2025-09-26')}`);
+            console.log(`   Found target dates: ${foundTargetDates.join(', ')}`);
+            
+          } else {
+            results[test.name] = {
+              success: false,
+              error: 'No data returned',
+              totalOptions: 0,
+              expirationDates: []
+            };
+            console.log(`❌ ${test.name}: No data returned`);
+          }
+        } catch (error) {
+          results[test.name] = {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            totalOptions: 0,
+            expirationDates: []
+          };
+          console.log(`❌ ${test.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+      
+      // Also test the current service methods
+      console.log(`🔄 Testing current service methods...`);
+      const serviceResults = {};
+      
+      try {
+        const comprehensiveData = await marketDataApiService.getOptionsChain(symbol);
+        serviceResults.comprehensive = comprehensiveData ? {
+          success: true,
+          totalOptions: comprehensiveData.options.length,
+          expirationDates: comprehensiveData.expirationDates,
+          has20250926: comprehensiveData.expirationDates.includes('2025-09-26')
+        } : { success: false, error: 'No data' };
+      } catch (error) {
+        serviceResults.comprehensive = { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+      
+      try {
+        const snapshotData = await marketDataApiService.getOptionsChainSnapshot(symbol, '2025-09-26');
+        serviceResults.snapshot20250926 = {
+          success: true,
+          totalOptions: snapshotData.length,
+          hasData: snapshotData.length > 0
+        };
+      } catch (error) {
+        serviceResults.snapshot20250926 = { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+      
+      res.json({
+        symbol,
+        timestamp: new Date().toISOString(),
+        rawApiTests: results,
+        serviceMethodTests: serviceResults,
+        summary: {
+          totalTests: Object.keys(results).length,
+          successfulTests: Object.values(results).filter(r => r.success).length,
+          allExpirations: [...new Set(Object.values(results).flatMap(r => r.expirationDates || []))].sort(),
+          has20250926: Object.values(results).some(r => r.has20250926)
+        }
+      });
+      
+    } catch (error) {
+      console.error(`❌ MarketData raw test failed:`, error);
+      res.status(500).json({
+        error: "MarketData raw test failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Check what's currently in the database for a symbol
+  app.get("/api/debug/check-database/:symbol", async (req: any, res) => {
+    try {
+      const symbol = req.params.symbol.toUpperCase();
+      console.log(`🔍 Checking database contents for ${symbol}...`);
+      
+      const { storage } = await import('../storage');
+      
+      // Get all data for this symbol
+      const allData = await storage.getOptionsChainFromDB(symbol);
+      console.log(`📊 Found ${allData.length} records for ${symbol} in database`);
+      
+      if (allData.length > 0) {
+        const uniqueExpirations = [...new Set(allData.map(r => r.expirationDate))].sort();
+        console.log(`📅 Unique expirations in database: ${uniqueExpirations.join(', ')}`);
+        
+        // Group by expiration
+        const expirationGroups = {};
+        for (const record of allData) {
+          const expDate = record.expirationDate;
+          if (!expirationGroups[expDate]) {
+            expirationGroups[expDate] = { calls: 0, puts: 0, total: 0, sample: null };
+          }
+          expirationGroups[expDate].total++;
+          if (record.optionType === 'call') {
+            expirationGroups[expDate].calls++;
+          } else {
+            expirationGroups[expDate].puts++;
+          }
+          if (!expirationGroups[expDate].sample) {
+            expirationGroups[expDate].sample = record;
+          }
+        }
+        
+        console.log(`📅 Database expiration breakdown:`);
+        for (const [expDate, counts] of Object.entries(expirationGroups)) {
+          console.log(`   ${expDate}: ${counts.total} total (${counts.calls} calls, ${counts.puts} puts)`);
+        }
+        
+        res.json({
+          symbol,
+          success: true,
+          totalRecords: allData.length,
+          uniqueExpirations: uniqueExpirations,
+          expirationBreakdown: expirationGroups,
+          sampleRecord: allData[0] || null
+        });
+      } else {
+        console.log(`❌ No records found for ${symbol} in database`);
+        res.json({
+          symbol,
+          success: true,
+          totalRecords: 0,
+          uniqueExpirations: [],
+          expirationBreakdown: {},
+          message: "No records found in database"
+        });
+      }
+      
+    } catch (error) {
+      console.error(`❌ Database check failed:`, error);
+      res.status(500).json({
+        error: "Database check failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Clear database and force fresh fetch from MarketData.app
+  app.get("/api/debug/clear-and-fetch/:symbol", async (req: any, res) => {
+    try {
+      const symbol = req.params.symbol.toUpperCase();
+      console.log(`🔍 CLEARING database and forcing fresh MarketData.app fetch for ${symbol}...`);
+      
+      const { storage } = await import('../storage');
+      
+      // Clear existing data
+      console.log(`🗑️ Clearing existing database data for ${symbol}...`);
+      const existingData = await storage.getOptionsChainFromDB(symbol);
+      console.log(`📊 Found ${existingData.length} existing records for ${symbol}`);
+      
+      if (existingData.length > 0) {
+        const { db } = await import('../db');
+        const { optionsChains } = await import('../db/schema');
+        const { eq } = await import('drizzle-orm');
+        
+        await db.delete(optionsChains).where(eq(optionsChains.symbol, symbol));
+        console.log(`✅ Cleared ${existingData.length} records for ${symbol}`);
+      }
+      
+      // Force fresh fetch
+      const { optionsApiService } = await import('../optionsApiService');
+      console.log(`🔄 Calling getOptionsChain for ${symbol}...`);
+      const freshData = await optionsApiService.getOptionsChain(symbol);
+      
+      console.log(`🔍 RAW MarketData.app response:`, {
+        success: !!freshData,
+        hasOptions: !!freshData?.options,
+        optionsCount: freshData?.options?.length || 0,
+        expirationDates: freshData?.expirationDates || [],
+        symbol: freshData?.symbol,
+        underlyingPrice: freshData?.underlyingPrice,
+        dataSource: freshData?.dataSource,
+        timestamp: freshData?.timestamp
+      });
+      
+      if (freshData && freshData.options) {
+        // Save to database
+        console.log(`💾 Saving fresh data to database...`);
+        await storage.saveOptionsChain(symbol, freshData);
+        
+        // Verify what was saved
+        const savedData = await storage.getOptionsChainFromDB(symbol);
+        console.log(`🔍 Database verification:`, {
+          totalSaved: savedData.length,
+          uniqueExpirations: [...new Set(savedData.map(r => r.expirationDate))].sort(),
+          sampleRecord: savedData[0] || null
+        });
+        
+        // Group by expiration
+        const expirationGroups = {};
+        for (const option of freshData.options) {
+          const expDate = option.expiration_date;
+          if (!expirationGroups[expDate]) {
+            expirationGroups[expDate] = { calls: 0, puts: 0, total: 0, sample: null };
+          }
+          expirationGroups[expDate].total++;
+          if (option.contract_type === 'call') {
+            expirationGroups[expDate].calls++;
+          } else {
+            expirationGroups[expDate].puts++;
+          }
+          if (!expirationGroups[expDate].sample) {
+            expirationGroups[expDate].sample = option;
+          }
+        }
+        
+        console.log(`📅 Expiration breakdown from MarketData.app:`);
+        for (const [expDate, counts] of Object.entries(expirationGroups)) {
+          console.log(`   ${expDate}: ${counts.total} total (${counts.calls} calls, ${counts.puts} puts)`);
+        }
+        
+        res.json({
+          symbol,
+          success: true,
+          action: 'cleared_and_fetched',
+          clearedRecords: existingData.length,
+          rawResponse: freshData,
+          expirationBreakdown: expirationGroups,
+          sampleOptions: freshData.options.slice(0, 5),
+          totalOptions: freshData.options.length,
+          availableExpirations: freshData.expirationDates,
+          databaseVerification: {
+            totalSaved: savedData.length,
+            uniqueExpirations: [...new Set(savedData.map(r => r.expirationDate))].sort()
+          }
+        });
+      } else {
+        console.log(`❌ No data returned from MarketData.app for ${symbol}`);
+        res.json({
+          symbol,
+          success: false,
+          action: 'cleared_but_no_data',
+          clearedRecords: existingData.length,
+          error: "No data returned from MarketData.app",
+          rawResponse: freshData
+        });
+      }
+      
+    } catch (error) {
+      console.error(`❌ Clear and fetch failed:`, error);
+      res.status(500).json({
+        error: "Clear and fetch failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Force fresh fetch from MarketData.app and show raw response
+  app.get("/api/debug/force-marketdata-fetch/:symbol", async (req: any, res) => {
+    try {
+      const symbol = req.params.symbol.toUpperCase();
+      console.log(`🔍 FORCING fresh MarketData.app fetch for ${symbol}...`);
+      
+      const { optionsApiService } = await import('../optionsApiService');
+      
+      // Force fresh fetch
+      console.log(`🔄 Calling getOptionsChain for ${symbol}...`);
+      const freshData = await optionsApiService.getOptionsChain(symbol);
+      
+      console.log(`🔍 RAW MarketData.app response:`, {
+        success: !!freshData,
+        hasOptions: !!freshData?.options,
+        optionsCount: freshData?.options?.length || 0,
+        expirationDates: freshData?.expirationDates || [],
+        symbol: freshData?.symbol,
+        underlyingPrice: freshData?.underlyingPrice,
+        dataSource: freshData?.dataSource,
+        timestamp: freshData?.timestamp
+      });
+      
+      if (freshData && freshData.options) {
+        // Group by expiration
+        const expirationGroups = {};
+        for (const option of freshData.options) {
+          const expDate = option.expiration_date;
+          if (!expirationGroups[expDate]) {
+            expirationGroups[expDate] = { calls: 0, puts: 0, total: 0, sample: null };
+          }
+          expirationGroups[expDate].total++;
+          if (option.contract_type === 'call') {
+            expirationGroups[expDate].calls++;
+          } else {
+            expirationGroups[expDate].puts++;
+          }
+          if (!expirationGroups[expDate].sample) {
+            expirationGroups[expDate].sample = option;
+          }
+        }
+        
+        console.log(`📅 Expiration breakdown from MarketData.app:`);
+        for (const [expDate, counts] of Object.entries(expirationGroups)) {
+          console.log(`   ${expDate}: ${counts.total} total (${counts.calls} calls, ${counts.puts} puts)`);
+        }
+        
+        res.json({
+          symbol,
+          success: true,
+          rawResponse: freshData,
+          expirationBreakdown: expirationGroups,
+          sampleOptions: freshData.options.slice(0, 5),
+          totalOptions: freshData.options.length,
+          availableExpirations: freshData.expirationDates
+        });
+      } else {
+        console.log(`❌ No data returned from MarketData.app for ${symbol}`);
+        res.json({
+          symbol,
+          success: false,
+          error: "No data returned from MarketData.app",
+          rawResponse: freshData
+        });
+      }
+      
+    } catch (error) {
+      console.error(`❌ Force MarketData fetch failed:`, error);
+      res.status(500).json({
+        error: "Force MarketData fetch failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Debug what MarketData.app actually returns for any symbol
+  app.get("/api/debug/marketdata-all-expirations/:symbol", async (req: any, res) => {
+    try {
+      const symbol = req.params.symbol.toUpperCase();
+      console.log(`🔍 Debugging ALL MarketData.app expirations for ${symbol}...`);
+      
+      const { optionsApiService } = await import('../optionsApiService');
+      
+      // Get comprehensive data
+      console.log(`🔄 Fetching comprehensive options chain for ${symbol}...`);
+      const comprehensiveData = await optionsApiService.getOptionsChain(symbol);
+      
+      if (comprehensiveData && comprehensiveData.options) {
+        console.log(`📊 MarketData.app comprehensive response for ${symbol}:`);
+        console.log(`   Total options: ${comprehensiveData.options.length}`);
+        console.log(`   Expiration dates: ${comprehensiveData.expirationDates.join(', ')}`);
+        
+        // Group by expiration and show counts
+        const expirationGroups = {};
+        for (const option of comprehensiveData.options) {
+          const expDate = option.expiration_date;
+          if (!expirationGroups[expDate]) {
+            expirationGroups[expDate] = { calls: 0, puts: 0, total: 0 };
+          }
+          expirationGroups[expDate].total++;
+          if (option.contract_type === 'call') {
+            expirationGroups[expDate].calls++;
+          } else {
+            expirationGroups[expDate].puts++;
+          }
+        }
+        
+        console.log(`📅 Expiration breakdown:`);
+        for (const [expDate, counts] of Object.entries(expirationGroups)) {
+          console.log(`   ${expDate}: ${counts.total} total (${counts.calls} calls, ${counts.puts} puts)`);
+        }
+        
+        res.json({
+          symbol,
+          success: true,
+          totalOptions: comprehensiveData.options.length,
+          expirationDates: comprehensiveData.expirationDates,
+          expirationBreakdown: expirationGroups,
+          sampleOptions: comprehensiveData.options.slice(0, 5),
+          underlyingPrice: comprehensiveData.underlyingPrice,
+          dataSource: comprehensiveData.dataSource,
+          timestamp: comprehensiveData.timestamp
+        });
+      } else {
+        console.log(`❌ No data returned from MarketData.app for ${symbol}`);
+        res.json({
+          symbol,
+          success: false,
+          error: "No data returned from MarketData.app",
+          totalOptions: 0,
+          expirationDates: [],
+          expirationBreakdown: {}
+        });
+      }
+      
+    } catch (error) {
+      console.error(`❌ MarketData comprehensive debug failed:`, error);
+      res.status(500).json({
+        error: "MarketData comprehensive debug failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Test database connection and schema
+  app.get("/api/debug/test-database/:symbol", async (req: any, res) => {
+    try {
+      const symbol = req.params.symbol.toUpperCase();
+      console.log(`🔍 Testing database connection and schema for ${symbol}...`);
+      
+      const { db } = await import('../db');
+      const { optionsChains } = await import('../db/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      // Test 1: Simple select
+      console.log(`🔄 Test 1: Simple select query...`);
+      const existingData = await db.select().from(optionsChains).where(eq(optionsChains.symbol, symbol)).limit(5);
+      console.log(`✅ Found ${existingData.length} existing records`);
+      
+      // Test 2: Test insert with minimal data
+      console.log(`🔄 Test 2: Test insert with minimal data...`);
+      const testRecord = {
+        symbol: symbol,
+        expirationDate: '2025-12-31',
+        strike: 999.99,
+        optionType: 'call' as const,
+        bid: 1.0,
+        ask: 1.1,
+        lastPrice: 1.05,
+        volume: 100,
+        openInterest: 50,
+        impliedVolatility: 0.25,
+        delta: 0.5,
+        gamma: 0.01,
+        theta: -0.05,
+        vega: 0.1,
+      };
+      
+      try {
+        const [insertedRecord] = await db.insert(optionsChains).values(testRecord).returning();
+        console.log(`✅ Test insert successful:`, insertedRecord.id);
+        
+        // Clean up test record
+        await db.delete(optionsChains).where(eq(optionsChains.id, insertedRecord.id));
+        console.log(`✅ Test record cleaned up`);
+        
+        res.json({
+          symbol,
+          success: true,
+          action: 'database_test',
+          existingRecords: existingData.length,
+          testInsert: 'success',
+          sampleRecord: existingData[0] || null
+        });
+      } catch (insertError) {
+        console.error(`❌ Test insert failed:`, insertError);
+        res.json({
+          symbol,
+          success: false,
+          action: 'database_test',
+          existingRecords: existingData.length,
+          testInsert: 'failed',
+          error: insertError.message
+        });
+      }
+      
+    } catch (error) {
+      console.error(`❌ Database test failed:`, error);
+      res.status(500).json({
+        error: "Database test failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Test upsert functionality directly
+  app.get("/api/debug/test-upsert/:symbol", async (req: any, res) => {
+    try {
+      const symbol = req.params.symbol.toUpperCase();
+      console.log(`🔍 Testing UPSERT functionality for ${symbol}...`);
+      
+      const { optionsApiService } = await import('../optionsApiService');
+      const { storage } = await import('../storage');
+      
+      // Force fresh fetch from MarketData.app
+      console.log(`🔄 Fetching fresh data from MarketData.app for ${symbol}...`);
+      const freshData = await optionsApiService.getOptionsChain(symbol);
+      
+      if (freshData && freshData.options) {
+        console.log(`📊 Got ${freshData.options.length} options from MarketData.app`);
+        
+        // Test the upsert method directly
+        console.log(`🔄 Testing UPSERT method directly...`);
+        await storage.saveOptionsChain(symbol, freshData);
+        
+        // Verify what was saved
+        const savedData = await storage.getOptionsChainFromDB(symbol);
+        console.log(`🔍 Verification: ${savedData.length} records in database after upsert`);
+        
+        res.json({
+          symbol,
+          success: true,
+          action: 'upsert_test',
+          marketDataCount: freshData.options.length,
+          databaseCount: savedData.length,
+          sampleOptions: freshData.options.slice(0, 3),
+          sampleDatabaseRecords: savedData.slice(0, 3)
+        });
+      } else {
+        res.json({
+          symbol,
+          success: false,
+          error: "No data returned from MarketData.app",
+          rawResponse: freshData
+        });
+      }
+      
+    } catch (error) {
+      console.error(`❌ UPSERT test failed:`, error);
+      res.status(500).json({
+        error: "UPSERT test failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });

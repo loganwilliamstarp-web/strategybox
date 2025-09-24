@@ -115,7 +115,7 @@ app.use('/api/', rateLimitRules.general);
     
     log(`Attempting to start server on host: 0.0.0.0, port: ${port}`);
     
-    server.listen(port, "0.0.0.0", () => {
+    server.listen(port, "0.0.0.0", async () => {
       log(`✅ Server successfully started and listening on 0.0.0.0:${port}`);
       log(`Environment: ${env.get('NODE_ENV')}`);
       log(`🔐 Using ${env.shouldUseSecretsManager() ? 'AWS Secrets Manager' : 'Environment Variables'} for secrets`);
@@ -136,6 +136,11 @@ app.use('/api/', rateLimitRules.general);
       });
 
       // ATM validation scheduler temporarily disabled for debugging
+      
+      // Start options data updater for database-based options chain
+      const { optionsDataUpdater } = await import('./jobs/optionsDataUpdater');
+      optionsDataUpdater.start(15); // Update every 15 minutes
+      log('🚀 Options data updater started (15-minute intervals)');
     });
 
     server.on('error', (error: any) => {

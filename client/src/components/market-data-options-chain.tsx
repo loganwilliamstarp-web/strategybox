@@ -72,7 +72,12 @@ interface Props {
 }
 
 export function MarketDataOptionsChain({ isOpen, onClose, symbol, selectedExpiration: dashboardExpiration, onAddPosition }: Props) {
-  const [selectedExpiration, setSelectedExpiration] = useState<string>("");
+  // Don't render anything if modal is closed or no symbol
+  if (!isOpen || !symbol) {
+    return null;
+  }
+  
+  const [selectedExpiration, setSelectedExpiration] = useState<string>(dashboardExpiration || "");
   const [daysToExpiry, setDaysToExpiry] = useState(30);
   const [selectedPutStrike, setSelectedPutStrike] = useState<number>(0);
   const [selectedCallStrike, setSelectedCallStrike] = useState<number>(0);
@@ -95,14 +100,14 @@ export function MarketDataOptionsChain({ isOpen, onClose, symbol, selectedExpira
     enabled: isOpen,
   });
 
-  // Get Market Data options chain using unified hook
+  // Get Market Data options chain using unified hook (database-only, no caching)
   const { 
     optionsChain, 
     isLoading: chainLoading, 
     invalidateCache, 
     forceRefresh,
     getAvailableExpirations 
-  } = useOptionsChain(symbol, isOpen && !!marketDataStatus?.configured);
+  } = useOptionsChain(symbol, isOpen && !!marketDataStatus?.configured, selectedExpiration);
 
   // Calculate position with real market premiums  
   const { data: strangleData, isLoading: strangleLoading } = useQuery<SchwabStrangleData>({

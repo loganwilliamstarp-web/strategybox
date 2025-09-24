@@ -459,9 +459,9 @@ class MarketDataApiService implements OptionsDataProvider {
 
       // Get comprehensive options chain using chain endpoint 
       // Use higher limits to ensure we get strikes around current price and include all near-term expirations
-      // strikeLimit=200 for better strike coverage, dateLimit=50 to ensure today's expiration is included
+      // strikeLimit=200 for better strike coverage, REMOVED dateLimit to get ALL available expirations
       const chainData: MarketDataOptionsChain = await this.makeRequest(
-        `/v1/options/chain/${symbol}/?strikeLimit=200&dateLimit=50`
+        `/v1/options/chain/${symbol}/?strikeLimit=200`
       );
       
       if (chainData.s !== 'ok' || !chainData.optionSymbol || chainData.optionSymbol.length === 0) {
@@ -470,6 +470,16 @@ class MarketDataApiService implements OptionsDataProvider {
       }
       
       console.log(`📊 COST OPTIMIZED COMPREHENSIVE: Got ${chainData.optionSymbol.length} options from MarketData.app for ${symbol}`);
+      
+      // Log all expiration dates returned by MarketData.app
+      if (chainData.expiration) {
+        const uniqueExpirations = [...new Set(chainData.expiration.slice(0, 20).map(ts => {
+          const date = new Date(ts * 1000);
+          return date.toISOString().split('T')[0];
+        }))].sort();
+        console.log(`📅 MarketData.app returned expirations: ${uniqueExpirations.join(', ')}`);
+        console.log(`🔍 Looking for 2025-09-26: ${uniqueExpirations.includes('2025-09-26') ? 'FOUND' : 'NOT FOUND'}`);
+      }
       
       // DETAILED AAPL COMPREHENSIVE LOGGING
       if (symbol === 'AAPL') {

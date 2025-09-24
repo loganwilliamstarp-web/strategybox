@@ -531,8 +531,8 @@ export function registerTickerRoutes(app: Express): void {
             quotes.push({
               symbol: symbol,
               currentPrice: quote.currentPrice,
-              change: 0,
-              changePercent: 0
+              change: quote.change || 0,
+              changePercent: quote.changePercent || 0
             });
           }
         } catch (error) {

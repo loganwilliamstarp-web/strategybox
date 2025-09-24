@@ -157,25 +157,33 @@ export default function Dashboard() {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const day = today.getDay();
+    const day = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 5 = Friday, 6 = Saturday
 
     let daysUntilFriday: number;
-    if (day < 5) {
+    if (day <= 5) { // Sunday (0) through Friday (5)
       daysUntilFriday = 5 - day;
-    } else if (day === 5) {
-      daysUntilFriday = 7;
-    } else {
-      daysUntilFriday = 7 - day + 5;
+    } else { // Saturday (6)
+      daysUntilFriday = 6; // Next Friday is 6 days away
+    }
+
+    // Ensure we get at least 1 day (don't select today if it's Friday)
+    if (daysUntilFriday === 0) {
+      daysUntilFriday = 7; // Next Friday is 7 days away
     }
 
     const nextFriday = new Date(today);
-    nextFriday.setDate(today.getDate() + Math.max(daysUntilFriday, 1));
+    nextFriday.setDate(today.getDate() + daysUntilFriday);
 
     const formatted = nextFriday.toISOString().split("T")[0];
     console.log(
-      `📅 Dashboard default expiration: Today is ${today.toDateString()}, next Friday: ${formatted} (${nextFriday.toDateString()})`
+      `📅 Dashboard default expiration: Today is ${today.toDateString()} (day ${day}), next Friday: ${formatted} (${nextFriday.toDateString()})`
     );
     setSelectedExpiration(formatted);
+  }, [selectedExpiration]);
+
+  // Debug selectedExpiration changes
+  useEffect(() => {
+    console.log(`📅 Dashboard selectedExpiration changed to: ${selectedExpiration}`);
   }, [selectedExpiration]);
 
   // Update existing tickers when strategy or expiration changes
@@ -190,6 +198,7 @@ export default function Dashboard() {
   };
 
   const handleExpirationChange = (newExpiration: string) => {
+    console.log(`📅 Dashboard handleExpirationChange called with: ${newExpiration}`);
     setSelectedExpiration(newExpiration);
     if (tickers.length > 0) {
       updateAllTickersStrategyMutation.mutate({
@@ -340,13 +349,29 @@ export default function Dashboard() {
   const optimalIntervals = getOptimalRefetchInterval(isRealtimeConnected);
   
   const { data: allTickers = [], isLoading: tickersLoading, refetch } = useQuery<TickerWithPosition[]>({
-    queryKey: ["/api/tickers"], // Keep stable query key
-    refetchInterval: optimalIntervals.refetchInterval, // Market-aware intervals
-    staleTime: 30 * 1000, // Cache for 30 seconds when WebSocket is active
-    gcTime: 60 * 1000, // Cache for 1 minute
+    queryKey: ["/api/tickers"], // Single source of truth from database
+    refetchInterval: 0, // NO automatic refetching - manual control only
+    staleTime: 0, // ALWAYS consider data stale - force fresh fetch every time
+    gcTime: 0, // NO garbage collection time - don't cache anything
     refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchOnMount: true, // Always refetch on mount
     refetchIntervalInBackground: false, // Let WebSocket handle background updates
+    onSuccess: (data) => {
+      console.log('📊 Dashboard: Ticker data updated', data.length, 'tickers');
+      console.log('📊 Dashboard: Raw ticker data:', JSON.stringify(data, null, 2));
+      data.forEach((ticker: TickerWithPosition) => {
+        console.log(`📈 ${ticker.symbol}: $${ticker.currentPrice} (${ticker.priceChange >= 0 ? '+' : ''}${ticker.priceChangePercent}%)`);
+      });
+    },
+    onError: (error) => {
+      console.error('❌ Dashboard: Ticker query error:', error);
+    },
+    onSettled: (data, error) => {
+      console.log('📊 Dashboard: Query settled', { dataLength: data?.length, error: error?.message });
+      if (data && data.length > 0) {
+        console.log('📊 Dashboard: First ticker data:', JSON.stringify(data[0], null, 2));
+      }
+    },
   });
 
   // Only force refetch if WebSocket is disconnected
@@ -359,6 +384,11 @@ export default function Dashboard() {
       return () => clearInterval(interval);
     }
   }, [refetch, isRealtimeConnected]);
+
+  // Debug refetch calls
+  useEffect(() => {
+    console.log('🔄 Dashboard: Refetch function changed');
+  }, [refetch]);
 
   // Filter tickers based on selected expiration date
   const tickers = selectedDate 
@@ -402,15 +432,26 @@ export default function Dashboard() {
       return response;
     },
     onSuccess: (data) => {
+      console.log('🔄 Refresh completed:', data);
       toast({
         title: "Market Data Refreshed",
         description: `Updated ${data.pricesUpdated} prices and ${data.optionsUpdated} options with latest market data`,
         duration: 5000,
       });
-      // Force refresh all cached data
-      queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
+      // Force aggressive cache clearing and refetch
+      console.log('🗑️ Clearing all cached data...');
+      queryClient.removeQueries({ queryKey: ["/api/tickers"] });
+      queryClient.removeQueries({ queryKey: ["/api/portfolio/summary"] });
+      queryClient.removeQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey[0];
+          return typeof queryKey === 'string' && queryKey.includes('/api/market-data/options-chain');
+        }
+      });
+      // Force immediate refetch
+      console.log('🔄 Forcing immediate refetch...');
       queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
+      queryClient.refetchQueries({ queryKey: ["/api/portfolio/summary"] });
     },
     onError: (error) => {
       toast({
@@ -802,6 +843,7 @@ export default function Dashboard() {
                 <TickerCard 
                   key={ticker.id} 
                   ticker={ticker} 
+                  selectedExpiration={selectedExpiration}
                   onViewOptions={(symbol) => {
                     setSelectedOptionsSymbol(symbol);
                     setIsOptionsChainOpen(true);
@@ -823,6 +865,7 @@ export default function Dashboard() {
           symbol={selectedOptionsSymbol}
           isOpen={isOptionsChainOpen}
           selectedExpiration={selectedExpiration}
+          onExpirationChange={handleExpirationChange}
           onClose={() => {
             setIsOptionsChainOpen(false);
             setSelectedOptionsSymbol("");

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,11 +16,28 @@ interface OptionsChainProps {
   onClose: () => void;
   selectedExpiration?: string; // Add expiration prop from dashboard
   currentPrice?: number;
+  onExpirationChange?: (expiration: string) => void; // Add callback to sync back to dashboard
 }
 
-export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpiration: dashboardExpiration, currentPrice }: OptionsChainProps) {
-  const [selectedExpiration, setSelectedExpiration] = useState<string>("");
+export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpiration: dashboardExpiration, currentPrice, onExpirationChange }: OptionsChainProps) {
+  console.log(`🔄 OptionsChainComponent rendered - dashboardExpiration: ${dashboardExpiration}, symbol: ${symbol}, isOpen: ${isOpen}`);
+  
+  // Don't render anything if modal is closed or no symbol
+  if (!isOpen || !symbol) {
+    return null;
+  }
+  
+  const [selectedExpiration, setSelectedExpiration] = useState<string>(dashboardExpiration || "");
   const [selectedTab, setSelectedTab] = useState<"calls" | "puts">("calls");
+
+  // Initialize selectedExpiration with dashboard expiration when modal opens
+  useEffect(() => {
+    console.log(`📅 OptionsChain initialization check - dashboardExpiration: ${dashboardExpiration}, selectedExpiration: ${selectedExpiration}`);
+    if (dashboardExpiration && dashboardExpiration !== selectedExpiration) {
+      console.log(`📅 OptionsChain initializing with dashboard expiration: ${dashboardExpiration}`);
+      setSelectedExpiration(dashboardExpiration);
+    }
+  }, [dashboardExpiration, selectedExpiration]);
 
   const { 
     optionsChain: optionsData, 
@@ -28,21 +45,76 @@ export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpirat
     error, 
     getAvailableExpirations,
     forceRefresh 
-  } = useOptionsChain(symbol, !!symbol && isOpen);
+  } = useOptionsChain(symbol, isOpen && !!symbol, selectedExpiration);
+
+  const queryClient = useQueryClient();
+
+  // Force refresh options chain data when modal opens to ensure fresh data
+  useEffect(() => {
+    if (isOpen && symbol) {
+      console.log(`🔄 Options chain modal opened for ${symbol} - AGGRESSIVELY clearing all caches`);
+      
+      // AGGRESSIVE CACHE CLEARING - Remove ALL related queries
+      queryClient.removeQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey[0];
+          return typeof queryKey === 'string' && (
+            queryKey.includes('/api/tickers') ||
+            queryKey.includes('/api/market-data/options-chain') ||
+            queryKey.includes('/api/portfolio/summary')
+          );
+        }
+      });
+      
+      // Force immediate fresh data fetch
+      queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
+      queryClient.refetchQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey[0];
+          return typeof queryKey === 'string' && queryKey.includes('/api/market-data/options-chain');
+        }
+      });
+      
+      // Force refresh options chain
+      forceRefresh();
+    }
+  }, [isOpen, symbol, forceRefresh, queryClient]);
 
   // Sync with dashboard expiration selection
   useEffect(() => {
+    console.log(`📅 OptionsChain sync check - dashboardExpiration: ${dashboardExpiration}, selectedExpiration: ${selectedExpiration}`);
     if (dashboardExpiration && dashboardExpiration !== selectedExpiration) {
       console.log(`📅 OptionsChain syncing with dashboard expiration: ${dashboardExpiration}`);
       setSelectedExpiration(dashboardExpiration);
       // Force refresh when dashboard expiration changes
       forceRefresh();
     }
-  }, [dashboardExpiration]);
+  }, [dashboardExpiration, selectedExpiration]);
+
+  // Handle expiration change in options chain and sync back to dashboard
+  const handleExpirationChange = (newExpiration: string) => {
+    console.log(`📅 OptionsChain expiration changed to: ${newExpiration}, syncing to dashboard`);
+    setSelectedExpiration(newExpiration);
+    // Sync back to dashboard
+    if (onExpirationChange) {
+      onExpirationChange(newExpiration);
+    }
+    // Force refresh dashboard data to ensure consistency
+    queryClient.removeQueries({ queryKey: ["/api/tickers"] });
+    queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
+  };
+
+  // Handle modal close with data refresh
+  const handleClose = () => {
+    console.log(`🔄 Options chain modal closing - forcing dashboard data refresh`);
+    // Force refresh dashboard data when modal closes to ensure consistency
+    queryClient.removeQueries({ queryKey: ["/api/tickers"] });
+    queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
+    onClose();
+  };
 
 
 
-  if (!isOpen) return null;
 
   if (isLoading) {
     return (
@@ -63,7 +135,7 @@ export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpirat
         <Card className="w-full max-w-4xl mx-4">
           <CardContent className="p-8 text-center">
             <p className="text-red-600 mb-4">Failed to load options chain</p>
-            <Button onClick={onClose} data-testid="button-close-error">Close</Button>
+            <Button onClick={handleClose} data-testid="button-close-error">Close</Button>
           </CardContent>
         </Card>
       </div>
@@ -74,10 +146,12 @@ export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpirat
   const availableExpirations = optionsData?.options ? 
     Array.from(new Set(optionsData.options.map((opt: any) => opt.expiration_date as string))) : [];
   
-  // Auto-select the first expiration if none selected
-  if (!selectedExpiration && availableExpirations.length > 0) {
-    setSelectedExpiration(availableExpirations[0] as string);
-  }
+  console.log(`📅 Available expirations from API:`, availableExpirations);
+  console.log(`📅 Modal selectedExpiration:`, selectedExpiration);
+  console.log(`📅 Dashboard expiration:`, dashboardExpiration);
+  
+  // Don't auto-select - always use dashboard expiration
+  // The dashboard expiration should be the source of truth
 
   // Show all available options - no complex filtering
   const currentOptions = optionsData?.options || [];
@@ -177,27 +251,32 @@ export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpirat
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-gray-500" />
-                <Select value={selectedExpiration} onValueChange={setSelectedExpiration}>
+                <Select value={dashboardExpiration || selectedExpiration} onValueChange={handleExpirationChange}>
                   <SelectTrigger className="w-48" data-testid="select-expiration">
                     <SelectValue placeholder="Select expiration" />
                   </SelectTrigger>
                   <SelectContent>
-                    {optionsData?.options && (Array.from(new Set(optionsData.options.map((opt: any) => opt.expiration_date as string))) as string[]).map((date: string) => (
-                      <SelectItem key={date} value={date} data-testid={`option-expiration-${date}`}>
-                        {new Date(date).toLocaleDateString('en-US', {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </SelectItem>
-                    ))}
+                    {optionsData?.options && (Array.from(new Set(optionsData.options.map((opt: any) => opt.expiration_date as string))) as string[]).map((date: string) => {
+                      console.log('📅 Options Chain - Processing expiration date:', date);
+                      const formattedDate = new Date(date).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      });
+                      console.log('📅 Options Chain - Formatted date:', formattedDate);
+                      return (
+                        <SelectItem key={date} value={date} data-testid={`option-expiration-${date}`}>
+                          {formattedDate}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <Button 
-              onClick={onClose}
+              onClick={handleClose}
               variant="outline"
               data-testid="button-close-options"
             >
