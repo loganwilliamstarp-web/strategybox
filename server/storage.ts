@@ -600,53 +600,81 @@ export class DatabaseStorage implements IStorage {
   // REMOVED: Mock data generation function - system now exclusively uses real market data from marketdata.app
 
   async updateOptionsChain(symbol: string, chains: InsertOptionsChain[]): Promise<void> {
-    console.log(`💾 UPSERT: updateOptionsChain called for ${symbol} with ${chains.length} chains`);
+    console.log(`🔄 ROBUST UPSERT: updateOptionsChain called for ${symbol} with ${chains.length} chains`);
     
     if (chains.length === 0) {
       console.log(`⚠️ No chains to update for ${symbol}`);
       return;
     }
 
-    // Manual upsert pattern: check if exists, then update or insert
-    for (const chain of chains) {
-      const existing = await db
-        .select()
-        .from(optionsChains)
-        .where(
-          and(
-            eq(optionsChains.symbol, chain.symbol),
-            eq(optionsChains.expirationDate, chain.expirationDate),
-            eq(optionsChains.strike, chain.strike),
-            eq(optionsChains.optionType, chain.optionType)
-          )
-        )
-        .limit(1);
+    const batchSize = 500; // Process in batches for performance
+    const totalBatches = Math.ceil(chains.length / batchSize);
+    
+    console.log(`🔄 Processing ${chains.length} options in ${totalBatches} batches of up to ${batchSize} records`);
 
-      if (existing.length > 0) {
-        // Update existing record
-        await db
-          .update(optionsChains)
-          .set({
-            bid: chain.bid,
-            ask: chain.ask,
-            lastPrice: chain.lastPrice,
-            volume: chain.volume,
-            openInterest: chain.openInterest,
-            impliedVolatility: chain.impliedVolatility,
-            delta: chain.delta,
-            gamma: chain.gamma,
-            theta: chain.theta,
-            vega: chain.vega,
-            updatedAt: sql`NOW()`
-          })
-          .where(eq(optionsChains.id, existing[0].id));
-      } else {
-        // Insert new record
-        await db.insert(optionsChains).values(chain);
+    // Group chains by expiration date for proper scoping
+    const chainsByExpiration = new Map<string, InsertOptionsChain[]>();
+    for (const chain of chains) {
+      if (!chainsByExpiration.has(chain.expirationDate)) {
+        chainsByExpiration.set(chain.expirationDate, []);
       }
+      chainsByExpiration.get(chain.expirationDate)!.push(chain);
+    }
+
+    let totalProcessed = 0;
+    
+    // Process each expiration separately to avoid cross-contamination
+    for (const [expirationDate, expirationChains] of chainsByExpiration) {
+      console.log(`📅 Processing ${expirationChains.length} chains for ${symbol} expiring ${expirationDate}`);
+      
+      // Use database transaction for atomicity
+      await db.transaction(async (tx) => {
+        // Process in batches within the transaction
+        for (let i = 0; i < expirationChains.length; i += batchSize) {
+          const batch = expirationChains.slice(i, i + batchSize);
+          const batchNum = Math.floor(i / batchSize) + 1;
+          const totalBatchesForExp = Math.ceil(expirationChains.length / batchSize);
+          
+          console.log(`  📦 Batch ${batchNum}/${totalBatchesForExp}: Processing ${batch.length} records...`);
+          
+          try {
+            // Use bulk insert with ON CONFLICT DO UPDATE for efficient upserts
+            await tx
+              .insert(optionsChains)
+              .values(batch.map(chain => ({
+                ...chain,
+                updatedAt: new Date() // Ensure fresh timestamp
+              })))
+              .onConflictDoUpdate({
+                target: [optionsChains.symbol, optionsChains.expirationDate, optionsChains.strike, optionsChains.optionType],
+                set: {
+                  bid: sql.raw('excluded.bid'),
+                  ask: sql.raw('excluded.ask'),
+                  lastPrice: sql.raw('excluded.last_price'),
+                  volume: sql.raw('excluded.volume'),
+                  openInterest: sql.raw('excluded.open_interest'),
+                  impliedVolatility: sql.raw('excluded.implied_volatility'),
+                  delta: sql.raw('excluded.delta'),
+                  gamma: sql.raw('excluded.gamma'),
+                  theta: sql.raw('excluded.theta'),
+                  vega: sql.raw('excluded.vega'),
+                  updatedAt: sql.raw('excluded.updated_at')
+                }
+              });
+              
+            totalProcessed += batch.length;
+            console.log(`  ✅ Batch ${batchNum}/${totalBatchesForExp}: Successfully upserted ${batch.length} records`);
+          } catch (batchError) {
+            console.error(`  ❌ Batch ${batchNum}/${totalBatchesForExp}: Failed to upsert:`, batchError);
+            throw batchError; // This will rollback the entire transaction
+          }
+        }
+        
+        console.log(`✅ Transaction completed for ${symbol} expiration ${expirationDate}: ${expirationChains.length} records`);
+      });
     }
     
-    console.log(`✅ UPSERT: Successfully upserted ${chains.length} chains for ${symbol}`);
+    console.log(`🎯 ROBUST UPSERT COMPLETE: Successfully processed ${totalProcessed}/${chains.length} chains for ${symbol}`);
   }
 
   async saveOptionsChain(symbol: string, chainData: OptionsChainData): Promise<void> {
