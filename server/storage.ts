@@ -177,6 +177,8 @@ export class DatabaseStorage implements IStorage {
 
   async createOrUpdateUser(userData: CreateOrUpdateUser): Promise<User> {
     try {
+      console.log(`🔧 Creating/updating user: ${userData.id} (${userData.email})`);
+      
       const payload: InsertUser = {
         id: userData.id,
         email: userData.email,
@@ -185,21 +187,48 @@ export class DatabaseStorage implements IStorage {
         profileImageUrl: userData.profileImageUrl,
       };
 
-      const [user] = await db
-        .insert(users)
-        .values(payload)
-        .onConflictDoUpdate({
-          target: users.email,
-          set: {
+      // First try to find existing user by email
+      const existingUser = await db.select().from(users).where(eq(users.email, userData.email));
+      
+      if (existingUser.length > 0) {
+        // User exists with different ID, need to update tickers first, then user ID
+        console.log(`🔄 Updating existing user ID from ${existingUser[0].id} to ${userData.id}`);
+        
+        // First, update all tickers to reference the new user ID
+        await db
+          .update(tickers)
+          .set({
+            userId: userData.id,
+          })
+          .where(eq(tickers.userId, existingUser[0].id));
+        
+        console.log(`🔄 Updated tickers to reference new user ID: ${userData.id}`);
+        
+        // Now update the user ID
+        const [updatedUser] = await db
+          .update(users)
+          .set({
+            id: userData.id,
             firstName: userData.firstName,
             lastName: userData.lastName,
             profileImageUrl: userData.profileImageUrl,
             updatedAt: new Date(),
-          },
-        })
-        .returning();
-      return user;
+          })
+          .where(eq(users.email, userData.email))
+          .returning();
+        
+        console.log(`✅ Successfully updated user ID and migrated tickers`);
+        return updatedUser;
+      } else {
+        // No existing user, create new one
+        const [user] = await db
+          .insert(users)
+          .values(payload)
+          .returning();
+        return user;
+      }
     } catch (error) {
+      console.error(`❌ Failed to create/update user ${userData.id}:`, error);
       handleDbError('createOrUpdateUser', error);
     }
   }
@@ -227,12 +256,24 @@ export class DatabaseStorage implements IStorage {
 
   async createTicker(tickerData: InsertTicker): Promise<Ticker> {
     try {
+      console.log(`🔧 Creating ticker for user: ${tickerData.userId}, symbol: ${tickerData.symbol}`);
+      
+      // First, verify the user exists
+      const user = await db.select().from(users).where(eq(users.id, tickerData.userId));
+      if (user.length === 0) {
+        throw new Error(`User ${tickerData.userId} does not exist in database`);
+      }
+      console.log(`✅ User ${tickerData.userId} exists in database`);
+      
       const [ticker] = await db
         .insert(tickers)
         .values(tickerData)
         .returning();
+      
+      console.log(`✅ Ticker created successfully: ${ticker.id}`);
       return ticker;
     } catch (error) {
+      console.error(`❌ Failed to create ticker for user ${tickerData.userId}:`, error);
       handleDbError('createTicker', error);
     }
   }

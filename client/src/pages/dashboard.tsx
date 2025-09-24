@@ -36,6 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 import { useCapacitor } from "@/hooks/useCapacitor";
+import { useRealtimeDataV3 } from "@/hooks/useRealtimeDataV3";
 import { getOptimalRefetchInterval, getMarketSession, getCurrentEasternTime } from "@/utils/marketHours";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -50,8 +51,7 @@ import type { TickerWithPosition, PortfolioSummary, StrategyType, strategyTypes 
 
 export default function Dashboard() {
   const { user } = useAuth();
-  // const { isConnected: isRealtimeConnected } = useRealtimeDataV3(); // TEMPORARILY DISABLED
-  const isRealtimeConnected = false; // FORCE DISABLE WEBSOCKET
+  const { isConnected: isRealtimeConnected } = useRealtimeDataV3();
   const { isNative, triggerHaptics } = useCapacitor();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');

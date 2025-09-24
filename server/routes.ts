@@ -1663,12 +1663,13 @@ function generateRealisticOptionsData(symbol: string, currentPrice: number, expi
   
   // Set up WebSocket server for real-time price streaming
   const wss = new WebSocketServer({ server: httpServer, path: '/websocket-v3' });
+  console.log('✅ WebSocket server created on path /websocket-v3');
   
   // Store active connections with user authentication
   const activeConnections = new Map<string, { ws: WebSocket, userId: string }>();
   
   wss.on('connection', async (ws, req) => {
-    console.log('WebSocket connection established');
+    console.log('🔌 WebSocket connection established from:', req.url);
     
     let connectionId: string | null = null;
     let userId: string | null = null;
