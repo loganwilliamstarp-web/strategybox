@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -18,8 +18,28 @@ export function useRealtimeDataV3() {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  // Debounced invalidation to prevent request storms
+  const debouncedInvalidateTickersCache = useCallback(() => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    debounceTimeoutRef.current = setTimeout(() => {
+      console.log('🔄 WebSocket: Debounced cache invalidation executing...');
+      // Use refetchType: "inactive" to mark stale without immediate refetch
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/tickers"], 
+        refetchType: "inactive" 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/portfolio/summary"], 
+        refetchType: "inactive" 
+      });
+    }, 2000); // 2 second debounce to prevent spam
+  }, [queryClient]);
 
   const connect = () => {
     if (!user?.id) {
@@ -65,54 +85,58 @@ export function useRealtimeDataV3() {
               break;
             case 'initial_data':
               console.log('📊 WebSocket: Received initial data');
-              // Just invalidate - let React Query handle the refetch timing
-              queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-              queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
+              // Use debounced invalidation to prevent request storms
+              debouncedInvalidateTickersCache();
               break;
             case 'price_update':
               // Handle both message formats: individual symbol updates and batch ticker updates
               if (message.tickers && Array.isArray(message.tickers)) {
                 console.log('💰 WebSocket: Batch price update received', message.tickers.length, 'tickers');
-                // Just invalidate - let React Query's staleTime handle the refetch timing
-                queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-                queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
-                // Invalidate options chain cache for all tickers
+                // Use debounced invalidation to prevent request storms
+                debouncedInvalidateTickersCache();
+                // Invalidate options chain cache for all tickers (these are less frequent)
                 message.tickers.forEach((ticker: any) => {
                   if (ticker.symbol) {
-                    queryClient.invalidateQueries({ queryKey: ["/api/market-data/options-chain", ticker.symbol] });
+                    queryClient.invalidateQueries({ 
+                      queryKey: ["/api/market-data/options-chain", ticker.symbol],
+                      refetchType: "inactive"
+                    });
                   }
                 });
               } else if (message.symbol) {
                 console.log('💰 WebSocket: Individual price update for', message.symbol);
-                // Just invalidate - let React Query's staleTime handle the refetch timing
-                queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-                queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
+                // Use debounced invalidation to prevent request storms
+                debouncedInvalidateTickersCache();
                 // Invalidate options chain cache for the specific symbol
-                queryClient.invalidateQueries({ queryKey: ["/api/market-data/options-chain", message.symbol] });
+                queryClient.invalidateQueries({ 
+                  queryKey: ["/api/market-data/options-chain", message.symbol],
+                  refetchType: "inactive"
+                });
               }
               break;
             case 'premium_update':
               console.log('💎 WebSocket: Premium update received');
-              // Just invalidate - React Query will refetch based on component needs
-              queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-              queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
+              // Use debounced invalidation to prevent request storms
+              debouncedInvalidateTickersCache();
               // Invalidate options chain cache for all symbols
               queryClient.invalidateQueries({ 
                 predicate: (query) => {
                   const queryKey = query.queryKey[0];
                   return typeof queryKey === 'string' && queryKey.includes('/api/market-data/options-chain');
-                }
+                },
+                refetchType: "inactive"
               });
               break;
             case 'options_update':
               console.log('📊 WebSocket: Options update received for', message.symbol);
-              // Just invalidate - let React Query handle timing based on component visibility
+              // Use debounced invalidation to prevent request storms
+              debouncedInvalidateTickersCache();
               if (message.symbol) {
-                queryClient.invalidateQueries({ queryKey: ["/api/market-data/options-chain", message.symbol] });
+                queryClient.invalidateQueries({ 
+                  queryKey: ["/api/market-data/options-chain", message.symbol],
+                  refetchType: "inactive"
+                });
               }
-              // Also invalidate ticker data as options updates might affect position values
-              queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-              queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
               break;
             case 'error':
               console.error('❌ WebSocket: Server error', message.message);

@@ -53,6 +53,14 @@ export const queryClient = new QueryClient({
         if (error?.status === 401 || error?.status === 403) {
           return false;
         }
+        // Don't retry rate limit errors - respect the 429 response
+        if (error?.status === 429 || 
+            (error instanceof Error && (error.message.includes('429') || 
+                                       error.message.includes('Rate limit') || 
+                                       error.message.includes('Too Many Requests')))) {
+          console.warn('⏳ Rate limit hit - stopping retries to respect server limits');
+          return false;
+        }
         // Retry up to 2 times for other errors
         return failureCount < 2;
       },

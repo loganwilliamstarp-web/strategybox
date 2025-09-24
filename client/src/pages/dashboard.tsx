@@ -351,7 +351,10 @@ export default function Dashboard() {
   
   const { data: allTickers = [], isLoading: tickersLoading, refetch } = useQuery<TickerWithPosition[]>({
     queryKey: ["/api/tickers"], // Single source of truth from database
-    refetchInterval: optimalIntervals.refetchInterval, // Use market-aware intervals
+    // Enforce minimum 60 second intervals, prefer false when WebSocket connected
+    refetchInterval: isRealtimeConnected 
+      ? false 
+      : Math.max(optimalIntervals.refetchInterval || 60000, 60000), // Never allow 0 or less than 60s
     staleTime: 30 * 1000, // Consider data fresh for 30 seconds to prevent spam
     gcTime: 5 * 60 * 1000, // Keep cached for 5 minutes
     refetchOnWindowFocus: false, // Disable aggressive refetching - WebSocket handles updates
