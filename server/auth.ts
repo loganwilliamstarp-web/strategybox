@@ -63,12 +63,20 @@ export function setupAuth(app: Express) {
       },
       async (email, password, done) => {
         try {
+          console.log(`🔍 Attempting login for email: ${email}`);
           const user = await storage.getUserByEmail(email);
-          if (!user || !(await comparePasswords(password, user.password))) {
+          if (!user) {
+            console.log(`❌ User not found for email: ${email}`);
             return done(null, false);
           }
+          if (!(await comparePasswords(password, user.password))) {
+            console.log(`❌ Invalid password for email: ${email}`);
+            return done(null, false);
+          }
+          console.log(`✅ Login successful for user: ${user.email} (ID: ${user.id})`);
           return done(null, user);
         } catch (error) {
+          console.error(`❌ Login error for email ${email}:`, error);
           return done(error);
         }
       }
@@ -79,10 +87,13 @@ export function setupAuth(app: Express) {
   
   passport.deserializeUser(async (id: string, done) => {
     try {
+      console.log(`🔍 Deserializing user with ID: ${id}`);
       const user = await storage.getUser(id);
       if (user) {
+        console.log(`✅ User deserialized successfully: ${user.email}`);
         done(null, user);
       } else {
+        console.log(`❌ User not found for ID: ${id}`);
         // If user not found, clear the session
         done(null, false);
       }
