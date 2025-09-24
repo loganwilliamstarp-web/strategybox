@@ -453,10 +453,10 @@ class MarketDataApiService implements OptionsDataProvider {
       // STEP 1: Get all available expirations with date range to capture all Friday expirations
       console.log(`🔄 STEP 1: Getting all available expirations for ${symbol}...`);
       
-      // Calculate date range to ensure we get all Friday expiration dates including 09/26
+      // Calculate date range dynamically from today until 60 days from now
       const today = new Date();
-      const fromDate = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000)); // 1 week ago to capture near-term
-      const toDate = new Date(today.getTime() + (90 * 24 * 60 * 60 * 1000)); // 90 days out to capture multiple cycles
+      const fromDate = new Date(today.getTime() - (1 * 24 * 60 * 60 * 1000)); // 1 day ago to capture current expiration
+      const toDate = new Date(today.getTime() + (60 * 24 * 60 * 60 * 1000)); // 60 days out as requested
       
       const fromDateStr = fromDate.toISOString().split('T')[0];
       const toDateStr = toDate.toISOString().split('T')[0];
@@ -480,44 +480,30 @@ class MarketDataApiService implements OptionsDataProvider {
 
       console.log(`📅 Found ${uniqueExpirations.length} available expirations for ${symbol}: ${uniqueExpirations.join(', ')}`);
 
-      // STEP 2: Fetch complete data for each expiration individually
-      console.log(`🔄 STEP 2: Fetching complete options data for each expiration...`);
+      // FIXED: Process all options data from the single from/to API call (avoid parameter conflicts)
+      console.log(`🔄 PROCESSING: Using data from single from/to API call to avoid parameter conflicts`);
       const allOptionsByExpiration: OptionContract[] = [];
 
-      for (const expiration of uniqueExpirations) {
-        console.log(`📊 Fetching complete data for ${symbol} expiration ${expiration}...`);
+      if (allExpirationsData.optionSymbol && allExpirationsData.optionSymbol.length > 0) {
+        console.log(`✅ Processing ${allExpirationsData.optionSymbol.length} options from single API call`);
         
-        // Add small delay to respect API limits
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        const expirationData: MarketDataOptionsChain = await this.makeRequest(
-          `/v1/options/chain/${symbol}/?date=${expiration}&strikeLimit=1000`
-        );
-        
-        if (expirationData.s !== 'ok' || !expirationData.optionSymbol || expirationData.optionSymbol.length === 0) {
-          console.warn(`⚠️ No options found for ${symbol} expiration ${expiration}`);
-          continue;
-        }
-        
-        console.log(`✅ Got ${expirationData.optionSymbol.length} options for ${symbol} ${expiration}`);
-        
-        // Process options for this expiration
-        for (let i = 0; i < expirationData.optionSymbol.length; i++) {
-          const optionSymbol = expirationData.optionSymbol[i];
-          const side = expirationData.side[i];
-          const strike = expirationData.strike[i];
-          const expirationTimestamp = expirationData.expiration[i];
+        // Process all options from the single comprehensive call
+        for (let i = 0; i < allExpirationsData.optionSymbol.length; i++) {
+          const optionSymbol = allExpirationsData.optionSymbol[i];
+          const side = allExpirationsData.side[i];
+          const strike = allExpirationsData.strike[i];
+          const expirationTimestamp = allExpirationsData.expiration[i];
           
           // Convert timestamp to YYYY-MM-DD format
           const expirationDate = new Date(expirationTimestamp * 1000).toISOString().split('T')[0];
           
           // Extract real market data
-          const bid = expirationData.bid?.[i] || 0;
-          const ask = expirationData.ask?.[i] || 0;
-          const last = expirationData.last?.[i] || 0;
-          const volume = expirationData.volume?.[i] || 0;
-          const openInterest = expirationData.openInterest?.[i] || 0;
-          const impliedVolatility = expirationData.iv?.[i];
+          const bid = allExpirationsData.bid?.[i] || 0;
+          const ask = allExpirationsData.ask?.[i] || 0;
+          const last = allExpirationsData.last?.[i] || 0;
+          const volume = allExpirationsData.volume?.[i] || 0;
+          const openInterest = allExpirationsData.openInterest?.[i] || 0;
+          const impliedVolatility = allExpirationsData.iv?.[i];
           
           // Calculate mid price if bid/ask available
           const midPrice = (bid > 0 && ask > 0) ? (bid + ask) / 2 : last;
@@ -533,14 +519,16 @@ class MarketDataApiService implements OptionsDataProvider {
             volume,
             open_interest: openInterest,
             implied_volatility: impliedVolatility,
-            delta: expirationData.delta?.[i],
-            gamma: expirationData.gamma?.[i],
-            theta: expirationData.theta?.[i],
-            vega: expirationData.vega?.[i],
+            delta: allExpirationsData.delta?.[i],
+            gamma: allExpirationsData.gamma?.[i],
+            theta: allExpirationsData.theta?.[i],
+            vega: allExpirationsData.vega?.[i],
             expirationLabel: expirationDate,
-            daysUntilExpiration: expirationData.dte?.[i] || Math.ceil((new Date(expirationDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+            daysUntilExpiration: allExpirationsData.dte?.[i] || Math.ceil((new Date(expirationDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
           });
         }
+      } else {
+        console.warn(`⚠️ No options data found in comprehensive call for ${symbol}`);
       }
       
       console.log(`✅ COMPLETE CHAIN: ${symbol} - ${allOptionsByExpiration.length} total options across ${uniqueExpirations.length} expirations`);
