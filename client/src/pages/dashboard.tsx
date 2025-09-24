@@ -25,6 +25,7 @@ import { VolatilitySurfaceComponent } from "@/components/volatility-surface";
 import { PositionComparisonComponent } from "@/components/position-comparison";
 import { StrategySelector } from "@/components/strategy-selector";
 import { ExpirationSelector } from "@/components/expiration-selector";
+import { RefreshTimer } from "@/components/refresh-timer";
 
 import { TutorialOverlay } from "@/components/tutorial-overlay";
 import { AchievementBadges } from "@/components/achievement-badges";
@@ -653,18 +654,23 @@ export default function Dashboard() {
               {/* Import Settings */}
               <ImportSettings />
               
-              {/* Refresh Button */}
+              {/* Refresh Button and Timer */}
               {apiStatus?.configured && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => refreshEarningsMutation.mutate()}
-                  disabled={refreshEarningsMutation.isPending || isAutoRefreshing}
-                  data-testid="button-refresh-earnings"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${(refreshEarningsMutation.isPending || isAutoRefreshing) ? 'animate-spin' : ''}`} />
-                  {isAutoRefreshing ? "Auto-Updating..." : refreshEarningsMutation.isPending ? "Refreshing..." : "Refresh"}
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refreshEarningsMutation.mutate()}
+                    disabled={refreshEarningsMutation.isPending || isAutoRefreshing}
+                    data-testid="button-refresh-earnings"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${(refreshEarningsMutation.isPending || isAutoRefreshing) ? 'animate-spin' : ''}`} />
+                    {isAutoRefreshing ? "Auto-Updating..." : refreshEarningsMutation.isPending ? "Refreshing..." : "Refresh"}
+                  </Button>
+                  
+                  {/* API Refresh Timer */}
+                  <RefreshTimer intervalMinutes={15} className="hidden sm:flex" />
+                </>
               )}
 
               {/* Position Comparison */}
