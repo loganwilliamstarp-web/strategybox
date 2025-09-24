@@ -314,6 +314,23 @@ export default function Dashboard() {
     }
   }, [user, isRealtimeConnected]);
 
+  // Add error boundary for rate limit handling
+  useEffect(() => {
+    const handleRateLimitError = (event: any) => {
+      if (event.detail?.status === 429) {
+        console.warn('🚨 Rate limit detected, backing off...');
+        toast({
+          title: "Rate Limit Hit",
+          description: "Too many requests. Please wait a moment before refreshing.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    window.addEventListener('rateLimitError', handleRateLimitError);
+    return () => window.removeEventListener('rateLimitError', handleRateLimitError);
+  }, [toast]);
+
   
   // Get market-aware refresh intervals
   const optimalIntervals = getOptimalRefetchInterval(isRealtimeConnected);

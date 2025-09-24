@@ -4,17 +4,20 @@ import { apiRequestWithAuth } from "./supabaseAuth";
 // Request batching utility to prevent rate limit issues on initial load
 class RequestBatcher {
   private pendingRequests = new Map<string, Promise<any>>();
-  private batchDelay = 100; // 100ms delay between batches
-  private maxConcurrent = 3; // Maximum 3 concurrent requests
+  private batchDelay = 200; // 200ms delay between batches
+  private maxConcurrent = 2; // Maximum 2 concurrent requests
+  private requestQueue: Array<() => Promise<void>> = [];
+  private processing = false;
 
   async batchRequest<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
     // If request is already pending, return the existing promise
     if (this.pendingRequests.has(key)) {
+      console.log(`🔄 RequestBatcher: Reusing existing request for ${key}`);
       return this.pendingRequests.get(key)!;
     }
 
-    // Create the request promise
-    const promise = this.executeWithDelay(requestFn);
+    // Create the request promise with queuing
+    const promise = this.executeWithQueuing(key, requestFn);
     this.pendingRequests.set(key, promise);
 
     // Clean up when done
@@ -25,12 +28,42 @@ class RequestBatcher {
     return promise;
   }
 
-  private async executeWithDelay<T>(requestFn: () => Promise<T>): Promise<T> {
-    // Add delay based on current pending requests to spread them out
-    const delay = Math.min(this.pendingRequests.size * this.batchDelay, 500);
-    await new Promise(resolve => setTimeout(resolve, delay));
+  private async executeWithQueuing<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.requestQueue.push(async () => {
+        try {
+          console.log(`🚀 RequestBatcher: Executing request for ${key}`);
+          const result = await requestFn();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      });
+      
+      this.processQueue();
+    });
+  }
+
+  private async processQueue(): Promise<void> {
+    if (this.processing || this.requestQueue.length === 0) {
+      return;
+    }
+
+    this.processing = true;
     
-    return requestFn();
+    while (this.requestQueue.length > 0) {
+      const batch = this.requestQueue.splice(0, this.maxConcurrent);
+      
+      // Execute batch concurrently
+      await Promise.all(batch.map(fn => fn()));
+      
+      // Add delay between batches
+      if (this.requestQueue.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.batchDelay));
+      }
+    }
+    
+    this.processing = false;
   }
 }
 
@@ -95,12 +128,18 @@ export const queryClient = new QueryClient({
         if (error?.status === 401 || error?.status === 403) {
           return false;
         }
-        // Don't retry rate limit errors - respect the 429 response
+        // For rate limit errors, retry with exponential backoff
         if (error?.status === 429 || 
             (error instanceof Error && (error.message.includes('429') || 
                                        error.message.includes('Rate limit') || 
                                        error.message.includes('Too Many Requests')))) {
-          console.warn('⏳ Rate limit hit - stopping retries to respect server limits');
+          console.warn(`⏳ Rate limit hit - retry ${failureCount + 1}/3 with backoff`);
+          if (failureCount < 3) {
+            // Exponential backoff: 1s, 2s, 4s
+            const delay = Math.pow(2, failureCount) * 1000;
+            setTimeout(() => {}, delay);
+            return true;
+          }
           return false;
         }
         // Retry up to 2 times for other errors
