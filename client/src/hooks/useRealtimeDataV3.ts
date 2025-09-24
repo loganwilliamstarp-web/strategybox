@@ -2,6 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useQueryClient } from '@tanstack/react-query';
 
+const WS_HOST = import.meta.env.VITE_WS_HOST || '';
+const WS_PATH = import.meta.env.VITE_WS_PATH || '/websocket-v4-cache-bypass';
+
 interface WebSocketMessage {
   type: 'authenticated' | 'initial_data' | 'price_update' | 'premium_update' | 'options_update' | 'error';
   connectionId?: string;
@@ -48,16 +51,22 @@ export function useRealtimeDataV3() {
     }
 
     try {
-      // Get the current host and port from the browser
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.hostname;
-      const port = window.location.port; // Use same port as current page
-      const wsUrl = port 
-        ? `${protocol}//${host}:${port}/websocket-v4-cache-bypass?token=${user.id}`
-        : `${protocol}//${host}/websocket-v4-cache-bypass?token=${user.id}`;
-      
+      let wsUrl: string;
+      if (WS_HOST) {
+        const protocol = WS_HOST.startsWith('http') ? (WS_HOST.startsWith('https') ? 'wss:' : 'ws:') : 'wss:';
+        const host = WS_HOST.replace(/^https?:\/\//, '').replace(/\/$/, '');
+        wsUrl = `${protocol}//${host}${WS_PATH}?token=${user.id}`;
+      } else {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.hostname;
+        const port = window.location.port;
+        wsUrl = port
+          ? `${protocol}//${host}:${port}${WS_PATH}?token=${user.id}`
+          : `${protocol}//${host}${WS_PATH}?token=${user.id}`;
+      }
+
       console.log('🔌 WebSocket: Connecting to', wsUrl);
-      
+
       wsRef.current = new WebSocket(wsUrl);
       
       wsRef.current.onopen = () => {

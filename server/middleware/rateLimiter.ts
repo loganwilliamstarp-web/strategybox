@@ -27,7 +27,9 @@ export class RateLimiter {
   private defaultKeyGenerator(req: Request): string {
     const ip = req.ip || (req.connection as any)?.remoteAddress || 'unknown';
     const userAgent = req.get('User-Agent') || 'unknown';
-    return `${ip}:${userAgent.substring(0, 50)}`;
+    const method = req.method || 'GET';
+    const route = `${req.baseUrl || ''}${req.path || req.originalUrl || ''}` || 'unknown-route';
+    return `${ip}:${method}:${route}:${userAgent.substring(0, 50)}`;
   }
 
   private getEntry(rule: RateLimitRule): RateLimitEntry {

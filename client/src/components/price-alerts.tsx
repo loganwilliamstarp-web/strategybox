@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useBatchedQuery } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +37,7 @@ export function PriceAlerts({ tickers }: PriceAlertsProps) {
   const queryClient = useQueryClient();
 
   const { data: alerts = [], isLoading } = useQuery<PriceAlert[]>({
-    queryKey: ['/api/alerts'],
+    ...useBatchedQuery(['/api/alerts'])
   });
 
   const createAlertMutation = useMutation({

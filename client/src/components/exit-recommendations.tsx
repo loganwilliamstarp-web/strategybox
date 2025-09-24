@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Brain, TrendingUp, TrendingDown, RefreshCw, X, Target, Shield, RotateCcw, Pause, AlertCircle, CheckCircle, Clock, DollarSign } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, useBatchedQuery } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { ExitRecommendation } from "@shared/schema";
 
@@ -15,7 +15,7 @@ export function ExitRecommendations() {
   const queryClient = useQueryClient();
 
   const { data: recommendations = [], isLoading, refetch } = useQuery<ExitRecommendation[]>({
-    queryKey: ['/api/recommendations'],
+    ...useBatchedQuery(['/api/recommendations'])
   });
 
   const generateRecommendationsMutation = useMutation({

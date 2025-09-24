@@ -39,7 +39,7 @@ import { useEffect } from "react";
 import { useCapacitor } from "@/hooks/useCapacitor";
 import { useRealtimeDataV3 } from "@/hooks/useRealtimeDataV3";
 import { getOptimalRefetchInterval, getMarketSession, getCurrentEasternTime } from "@/utils/marketHours";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, useBatchedQuery } from "@/lib/queryClient";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -318,17 +318,19 @@ export default function Dashboard() {
   // Get market-aware refresh intervals
   const optimalIntervals = getOptimalRefetchInterval(isRealtimeConnected);
   
+  // Use batched query for initial load to prevent rate limit issues
   const { data: allTickers = [], isLoading: tickersLoading, refetch } = useQuery<TickerWithPosition[]>({
-    queryKey: ["/api/tickers"], // Single source of truth from database
-    // Enforce minimum 60 second intervals, prefer false when WebSocket connected
-    refetchInterval: isRealtimeConnected 
-      ? false 
-      : Math.max(optimalIntervals.refetchInterval || 60000, 60000), // Never allow 0 or less than 60s
-    staleTime: 30 * 1000, // Consider data fresh for 30 seconds to prevent spam
-    gcTime: 5 * 60 * 1000, // Keep cached for 5 minutes
-    refetchOnWindowFocus: false, // Disable aggressive refetching - WebSocket handles updates
-    refetchOnMount: true, // Refetch once on mount
-    refetchIntervalInBackground: false, // Let WebSocket handle background updates
+    ...useBatchedQuery(["/api/tickers"], {
+      // Enforce minimum 60 second intervals, prefer false when WebSocket connected
+      refetchInterval: isRealtimeConnected 
+        ? false 
+        : Math.max(optimalIntervals.refetchInterval || 60000, 60000), // Never allow 0 or less than 60s
+      staleTime: 30 * 1000, // Consider data fresh for 30 seconds to prevent spam
+      gcTime: 5 * 60 * 1000, // Keep cached for 5 minutes
+      refetchOnWindowFocus: false, // Disable aggressive refetching - WebSocket handles updates
+      refetchOnMount: true, // Refetch once on mount
+      refetchIntervalInBackground: false, // Let WebSocket handle background updates
+    })
   });
 
   // Log ticker data when it changes (React Query v5 compatible)
@@ -370,8 +372,9 @@ export default function Dashboard() {
       })
     : allTickers;
 
+  // Use batched query for initial load to prevent rate limit issues
   const { data: portfolio, isLoading: portfolioLoading } = useQuery<PortfolioSummary>({
-    queryKey: ["/api/portfolio/summary"],
+    ...useBatchedQuery(["/api/portfolio/summary"])
   });
 
   // Calculate filtered portfolio summary when date is selected
@@ -383,16 +386,18 @@ export default function Dashboard() {
     avgImpliedVolatility: tickers.reduce((sum: number, ticker: TickerWithPosition) => sum + ticker.position.impliedVolatility, 0) / tickers.length,
   } : portfolio;
 
-  // Check API status
+  // Check API status - use batched queries for initial load
   const { data: apiStatus = { configured: false, status: "unknown" } } = useQuery<{ configured: boolean; status: string }>({
-    queryKey: ["/api/stock-api/status"],
-    refetchInterval: 5 * 60 * 1000, // Check every 5 minutes
+    ...useBatchedQuery(["/api/stock-api/status"], {
+      refetchInterval: 5 * 60 * 1000, // Check every 5 minutes
+    })
   });
 
-  // Check Schwab API status
+  // Check Schwab API status - use batched queries for initial load
   const { data: schwabStatus = { configured: false, status: "unknown", authenticated: false } } = useQuery<{ configured: boolean; status: string; authenticated: boolean }>({
-    queryKey: ["/api/schwab/status"],
-    refetchInterval: 5 * 60 * 1000, // Check every 5 minutes
+    ...useBatchedQuery(["/api/schwab/status"], {
+      refetchInterval: 5 * 60 * 1000, // Check every 5 minutes
+    })
   });
 
   // Enhanced refresh mutation - now refreshes BOTH prices and options/strikes

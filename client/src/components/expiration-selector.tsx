@@ -1,6 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
+import { useBatchedQuery } from "@/lib/queryClient";
 
 interface ExpirationSelectorProps {
   value: string;
@@ -61,9 +62,10 @@ export function ExpirationSelector({
 }: ExpirationSelectorProps) {
   // Fetch actual available expiration dates from database
   const { data: availableExpirations = [], isLoading } = useQuery<string[]>({
-    queryKey: ["/api/available-expirations"],
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    ...useBatchedQuery(["/api/available-expirations"], {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+    })
   });
 
   const expirations = useMemo(() => {

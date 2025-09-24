@@ -1,6 +1,41 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { apiRequestWithAuth } from "./supabaseAuth";
 
+// Request batching utility to prevent rate limit issues on initial load
+class RequestBatcher {
+  private pendingRequests = new Map<string, Promise<any>>();
+  private batchDelay = 100; // 100ms delay between batches
+  private maxConcurrent = 3; // Maximum 3 concurrent requests
+
+  async batchRequest<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
+    // If request is already pending, return the existing promise
+    if (this.pendingRequests.has(key)) {
+      return this.pendingRequests.get(key)!;
+    }
+
+    // Create the request promise
+    const promise = this.executeWithDelay(requestFn);
+    this.pendingRequests.set(key, promise);
+
+    // Clean up when done
+    promise.finally(() => {
+      this.pendingRequests.delete(key);
+    });
+
+    return promise;
+  }
+
+  private async executeWithDelay<T>(requestFn: () => Promise<T>): Promise<T> {
+    // Add delay based on current pending requests to spread them out
+    const delay = Math.min(this.pendingRequests.size * this.batchDelay, 500);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    
+    return requestFn();
+  }
+}
+
+export const requestBatcher = new RequestBatcher();
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -27,11 +62,18 @@ export async function apiRequest(
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
+  useBatching?: boolean;
 }) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
+  ({ on401: unauthorizedBehavior, useBatching = false }) =>
   async ({ queryKey }) => {
     try {
-      return await apiRequestWithAuth(queryKey.join("/") as string);
+      const url = queryKey.join("/") as string;
+      
+      if (useBatching) {
+        return await requestBatcher.batchRequest(url, () => apiRequestWithAuth(url));
+      } else {
+        return await apiRequestWithAuth(url);
+      }
     } catch (error: any) {
       if (unauthorizedBehavior === "returnNull" && error.message.includes("401")) {
         return null;
@@ -70,3 +112,12 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// Custom hook for batched queries to prevent rate limit issues on initial load
+export function useBatchedQuery<T>(queryKey: any[], options?: any) {
+  return {
+    queryKey,
+    queryFn: getQueryFn({ on401: "throw", useBatching: true }),
+    ...options,
+  };
+}
