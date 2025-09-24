@@ -25,6 +25,7 @@ Preferred communication style: Simple, everyday language.
 - **Session Storage**: In-memory session store for development with database fallback
 - **Real-time Communication**: WebSocket server for live price updates and strategy recalculations
 - **API Architecture**: RESTful endpoints with modular route separation
+- **Data Archival**: Automated weekly archival system for expired options data with historical preservation
 
 ### Strategy System
 - **Pattern**: Strategy Factory pattern with dedicated calculators for each options strategy
@@ -45,6 +46,14 @@ Preferred communication style: Simple, everyday language.
 - **Input Validation**: Comprehensive validation for all API endpoints
 - **Error Handling**: Structured error responses with correlation IDs
 - **Secure Credential Management**: MarketData.app and Finnhub API keys managed via Supabase secrets vault
+
+### Database Archival System
+- **Historical Preservation**: Automated weekly archival of expired options contracts to `historical_options_chains` table
+- **Smart Scheduling**: Dual-tier cleanup system with daily stale data removal and weekly historical archival
+- **Data Integrity**: Transaction-safe archival process with advisory locks to prevent conflicts
+- **Performance Optimization**: Expired options moved to dedicated historical table instead of deletion
+- **Retention Policy**: 7-day retention in main table before archival, preserving complete historical data
+- **Conflict Prevention**: Global cleanup locks and database-based scheduling to avoid concurrent operations
 
 ### Mobile Architecture
 - **Capacitor Integration**: Native iOS/Android app generation from web codebase
