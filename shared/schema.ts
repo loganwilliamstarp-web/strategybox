@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, real, integer, boolean, timestamp, index, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, real, integer, boolean, timestamp, index, uniqueIndex, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -98,7 +98,10 @@ export const optionsChains = pgTable("options_chains", {
   theta: real("theta").notNull(),
   vega: real("vega").notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  // Unique composite index to prevent duplicate options entries and enable proper upserts
+  uniqueOptionKey: uniqueIndex("options_composite_unique_idx").on(table.symbol, table.expirationDate, table.strike, table.optionType),
+}));
 
 // Price alerts for notifications
 export const priceAlerts = pgTable("price_alerts", {
