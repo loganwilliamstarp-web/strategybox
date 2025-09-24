@@ -50,8 +50,8 @@ const MobileTickerCard = memo(function MobileTickerCard({
       return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"], refetchType: "inactive" });
       toast({
         title: "Ticker removed",
         description: `${ticker.symbol} removed from portfolio.`,

@@ -34,8 +34,8 @@ export function useDataRefresh() {
       console.log("🔄 Data refresh completed:", data);
       
       // Invalidate all relevant queries to force fresh data
-      queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"], refetchType: "inactive" });
       queryClient.invalidateQueries({ queryKey: ["/api/market-data/status"] });
       
       // Invalidate all options chain queries

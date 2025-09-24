@@ -137,11 +137,9 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
       return response;
     },
     onSuccess: () => {
-      // Force refetch of data by invalidating and refetching immediately
-      queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
-      queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
-      queryClient.refetchQueries({ queryKey: ["/api/portfolio/summary"] });
+      // Only invalidate - let React Query handle timing to prevent request spam
+      queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"], refetchType: "inactive" });
       toast({
         title: "Ticker removed",
         description: `${ticker.symbol} has been removed from your portfolio.`,
@@ -225,11 +223,8 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
       // Always refetch after error or success to ensure server state
       console.log('🔄 Strike update completed - refreshing database data');
       // Only invalidate specific queries, don't remove all options chain data
-      queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
-      // Force immediate refetch
-      queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
-      queryClient.refetchQueries({ queryKey: ["/api/portfolio/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"], refetchType: "inactive" });
     },
   });
 
@@ -251,8 +246,7 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
   useEffect(() => {
     if (showStrikeSelector) {
       console.log(`🔄 Strike selector opened for ${ticker.symbol} - forcing ticker data refresh`);
-      queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-      queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
     }
   }, [showStrikeSelector, ticker.symbol, queryClient]);
 
