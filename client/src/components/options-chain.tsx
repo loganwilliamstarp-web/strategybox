@@ -66,8 +66,8 @@ export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpirat
         }
       });
       
-      // Force immediate fresh data fetch
-      queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
+      // Force immediate fresh data fetch with safe invalidation
+      queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
       queryClient.refetchQueries({ 
         predicate: (query) => {
           const queryKey = query.queryKey[0];
@@ -101,7 +101,7 @@ export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpirat
     }
     // Force refresh dashboard data to ensure consistency
     queryClient.removeQueries({ queryKey: ["/api/tickers"] });
-    queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
   };
 
   // Handle modal close with data refresh
@@ -109,7 +109,7 @@ export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpirat
     console.log(`🔄 Options chain modal closing - forcing dashboard data refresh`);
     // Force refresh dashboard data when modal closes to ensure consistency
     queryClient.removeQueries({ queryKey: ["/api/tickers"] });
-    queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
     onClose();
   };
 

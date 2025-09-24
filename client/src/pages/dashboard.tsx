@@ -379,8 +379,8 @@ export default function Dashboard() {
     if (!isRealtimeConnected) {
       const interval = setInterval(() => {
         console.log('🔄 FORCE REFETCH - WebSocket disconnected, using polling fallback');
-        // Use queryClient.refetchQueries instead of the changing refetch function
-        queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
+        // Use safe invalidation to prevent infinite loops
+        queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
       }, 60000); // 1 minute fallback when WebSocket is down
       return () => clearInterval(interval);
     }
@@ -449,10 +449,10 @@ export default function Dashboard() {
           return typeof queryKey === 'string' && queryKey.includes('/api/market-data/options-chain');
         }
       });
-      // Force immediate refetch
-      console.log('🔄 Forcing immediate refetch...');
-      queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
-      queryClient.refetchQueries({ queryKey: ["/api/portfolio/summary"] });
+      // Force immediate refresh with safe invalidation
+      console.log('🔄 Forcing immediate refresh...');
+      queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"], refetchType: "inactive" });
     },
     onError: (error) => {
       toast({

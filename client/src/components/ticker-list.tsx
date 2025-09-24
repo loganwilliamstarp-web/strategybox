@@ -21,11 +21,9 @@ export function TickerList({ tickers }: TickerListProps) {
       return response;
     },
     onSuccess: (_, symbol) => {
-      // Force refetch of data by invalidating and refetching immediately
-      queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
-      queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
-      queryClient.refetchQueries({ queryKey: ["/api/portfolio/summary"] });
+      // Only invalidate - let React Query handle timing to prevent request spam
+      queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"], refetchType: "inactive" });
       toast({
         title: "Ticker removed",
         description: `${symbol} has been removed from your portfolio.`,
