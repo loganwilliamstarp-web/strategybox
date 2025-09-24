@@ -236,7 +236,10 @@ export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpirat
                   <SelectContent>
                     {optionsData?.options && (Array.from(new Set(optionsData.options.map((opt: any) => opt.expiration_date as string))) as string[]).map((date: string) => {
                       console.log('📅 Options Chain - Processing expiration date:', date);
-                      const formattedDate = new Date(date).toLocaleDateString('en-US', {
+                      // Fix timezone issue by parsing date components directly to avoid UTC conversion
+                      const [year, month, day] = date.split('-').map(Number);
+                      const localDate = new Date(year, month - 1, day); // month is 0-indexed
+                      const formattedDate = localDate.toLocaleDateString('en-US', {
                         weekday: 'short',
                         month: 'short',
                         day: 'numeric',
