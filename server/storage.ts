@@ -918,35 +918,83 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Weekly archival scheduler - specifically for moving expired options to historical table
-  async scheduleWeeklyArchival(): Promise<void> {
-    console.log(`📅 WEEKLY SCHEDULER: Checking if weekly archival is needed...`);
+  // Saturday 8am archival scheduler - runs historical data archival every Saturday at 8am
+  async scheduleSaturdayArchival(): Promise<void> {
+    console.log(`📅 SATURDAY SCHEDULER: Checking if Saturday 8am archival is needed...`);
     
     try {
-      // Check if weekly archival is needed (run once per week)
-      const now = Date.now();
-      const oneWeekMs = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+      const now = new Date();
+      const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
+      const hour = now.getHours();
+      const minutes = now.getMinutes();
       
-      // For simplicity, use a simple in-memory check (in production, store this in DB)
-      if (!this.lastWeeklyArchivalTime || (now - this.lastWeeklyArchivalTime) >= oneWeekMs) {
-        console.log(`📅 Running scheduled weekly archival - last archival was ${this.lastWeeklyArchivalTime ? new Date(this.lastWeeklyArchivalTime).toISOString() : 'never'}`);
+      // Check if it's Saturday (day 6) and between 8:00-8:59am
+      const isSaturday = dayOfWeek === 6;
+      const isEightAM = hour === 8;
+      
+      console.log(`📅 Current time: ${now.toISOString()}, Day: ${dayOfWeek} (${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dayOfWeek]}), Hour: ${hour}:${minutes.toString().padStart(2, '0')}`);
+      console.log(`📅 Is Saturday: ${isSaturday}, Is 8am hour: ${isEightAM}`);
+      
+      if (!isSaturday || !isEightAM) {
+        // Calculate next Saturday 8am
+        const nextSaturday = new Date(now);
+        const daysUntilSaturday = (6 - dayOfWeek + 7) % 7 || 7; // Days until next Saturday
+        nextSaturday.setDate(now.getDate() + daysUntilSaturday);
+        nextSaturday.setHours(8, 0, 0, 0); // Set to 8:00:00 AM
         
-        await this.archiveExpiredOptionsAndCleanup();
-        this.lastWeeklyArchivalTime = now;
+        if (isSaturday && hour < 8) {
+          // It's Saturday but before 8am - wait until 8am today
+          nextSaturday.setDate(now.getDate());
+        }
         
-        console.log(`📅 Scheduled weekly archival completed, next archival after ${new Date(now + oneWeekMs).toISOString()}`);
-      } else {
-        const nextArchival = new Date(this.lastWeeklyArchivalTime + oneWeekMs);
-        console.log(`📅 Weekly archival not needed yet, next archival scheduled for ${nextArchival.toISOString()}`);
+        console.log(`📅 Not Saturday 8am yet. Next scheduled archival: ${nextSaturday.toISOString()}`);
+        return;
       }
+      
+      // Check if we already ran this week (prevent multiple runs within the same hour)
+      const weekKey = `${now.getFullYear()}-W${Math.ceil(now.getDate() / 7)}-${now.getMonth()}`;
+      if (this.lastArchivalWeek === weekKey) {
+        console.log(`📅 Archival already completed this week (${weekKey}), skipping`);
+        return;
+      }
+      
+      console.log(`📅 🎯 SATURDAY 8AM ARCHIVAL TRIGGER: Running historical data archival...`);
+      console.log(`📅 Week key: ${weekKey}, Last run week: ${this.lastArchivalWeek || 'never'}`);
+      
+      // Use database-based global lock to prevent concurrent archival processes
+      const archivalLockId = this.hashStringToInt('saturday_archival_lock');
+      
+      await db.transaction(async (tx) => {
+        try {
+          // Try to acquire archival lock (will wait up to 1 second)
+          await tx.execute(sql`SELECT pg_advisory_xact_lock(${archivalLockId})`);
+          console.log(`🔒 Saturday archival lock acquired`);
+          
+          // Run the historical data archival
+          await this.archiveExpiredOptionsAndCleanup();
+          
+          // Mark this week as completed
+          this.lastArchivalWeek = weekKey;
+          
+          console.log(`✅ Saturday 8am archival completed successfully for week ${weekKey}`);
+          
+        } catch (archivalError) {
+          console.error(`❌ Saturday archival failed:`, archivalError);
+          throw archivalError;
+        }
+        // Lock automatically released when transaction ends
+      });
+      
+      console.log(`🔓 Saturday archival lock released`);
+      
     } catch (schedulerError) {
-      console.error(`❌ WEEKLY SCHEDULER ERROR: Failed to run scheduled archival:`, schedulerError);
+      console.error(`❌ SATURDAY SCHEDULER ERROR: Failed to run scheduled archival:`, schedulerError);
       // Don't throw - archival failures shouldn't break normal operations
     }
   }
 
   private lastCleanupTime: number | null = null;
-  private lastWeeklyArchivalTime: number | null = null;
+  private lastArchivalWeek: string | null = null;
 
   async saveOptionsChain(symbol: string, chainData: OptionsChainData): Promise<void> {
     try {
