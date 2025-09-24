@@ -55,9 +55,10 @@ export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpirat
       console.log(`🔄 Options chain modal opened for ${symbol} - refreshing modal data only`);
 
       // Refresh the modal's own data without clearing unrelated caches
+      // Remove forceRefresh from dependencies to prevent infinite loops
       forceRefresh();
     }
-  }, [isOpen, symbol, forceRefresh]);
+  }, [isOpen, symbol]); // Removed forceRefresh from deps
 
   // Sync with dashboard expiration selection
   useEffect(() => {
@@ -66,9 +67,10 @@ export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpirat
       console.log(`📅 OptionsChain syncing with dashboard expiration: ${dashboardExpiration}`);
       setSelectedExpiration(dashboardExpiration);
       // Force refresh when dashboard expiration changes
+      // Remove forceRefresh from dependencies to prevent infinite loops
       forceRefresh();
     }
-  }, [dashboardExpiration, selectedExpiration]);
+  }, [dashboardExpiration]); // Removed selectedExpiration and forceRefresh from deps
 
   // Handle expiration change in options chain and sync back to dashboard
   const handleExpirationChange = (newExpiration: string) => {

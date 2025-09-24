@@ -318,11 +318,13 @@ export default function Dashboard() {
   useEffect(() => {
     const handleRateLimitError = (event: any) => {
       if (event.detail?.status === 429) {
-        console.warn('🚨 Rate limit detected, backing off...');
+        const retryAfter = event.detail?.retryAfter || 30;
+        console.warn(`🚨 Rate limit detected, backing off for ${retryAfter}s...`);
         toast({
           title: "Rate Limit Hit",
-          description: "Too many requests. Please wait a moment before refreshing.",
+          description: `Too many requests. Please wait ${retryAfter} seconds before refreshing.`,
           variant: "destructive",
+          duration: 5000,
         });
       }
     };
@@ -362,17 +364,8 @@ export default function Dashboard() {
     }
   }, [allTickers]);
 
-  // Only force refetch if WebSocket is disconnected
-  useEffect(() => {
-    if (!isRealtimeConnected) {
-      const interval = setInterval(() => {
-        console.log('🔄 FORCE REFETCH - WebSocket disconnected, using polling fallback');
-        // Use safe invalidation to prevent infinite loops
-        queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
-      }, 60000); // 1 minute fallback when WebSocket is down
-      return () => clearInterval(interval);
-    }
-  }, [isRealtimeConnected, queryClient]); // Remove refetch from deps to prevent infinite loops
+  // Only force refetch if WebSocket is disconnected - REMOVED to prevent infinite loops
+  // WebSocket reconnection handles this automatically
 
   // Debug refetch calls
   useEffect(() => {
@@ -430,18 +423,9 @@ export default function Dashboard() {
         description: `Updated ${data.pricesUpdated} prices and ${data.optionsUpdated} options with latest market data`,
         duration: 5000,
       });
-      // Force aggressive cache clearing and refetch
-      console.log('🗑️ Clearing all cached data...');
-      queryClient.removeQueries({ queryKey: ["/api/tickers"] });
-      queryClient.removeQueries({ queryKey: ["/api/portfolio/summary"] });
-      queryClient.removeQueries({ 
-        predicate: (query) => {
-          const queryKey = query.queryKey[0];
-          return typeof queryKey === 'string' && queryKey.includes('/api/market-data/options-chain');
-        }
-      });
-      // Force immediate refresh with safe invalidation
-      console.log('🔄 Forcing immediate refresh...');
+      // REMOVED aggressive cache clearing to prevent infinite loops
+      // Let React Query handle cache management naturally
+      console.log('🔄 Marking data as stale for natural refresh...');
       queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"], refetchType: "inactive" });
     },

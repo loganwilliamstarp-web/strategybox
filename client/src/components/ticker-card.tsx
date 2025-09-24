@@ -246,9 +246,10 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
   useEffect(() => {
     if (showStrikeSelector) {
       console.log(`🔄 Strike selector opened for ${ticker.symbol} - forcing ticker data refresh`);
+      // Remove queryClient from dependencies to prevent infinite loops
       queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
     }
-  }, [showStrikeSelector, ticker.symbol, queryClient]);
+  }, [showStrikeSelector, ticker.symbol]); // Removed queryClient from deps
 
   // Check for premium discrepancies by fetching fresh options data
   // PERFORMANCE FIX: Disable per-card polling, use global WebSocket updates instead

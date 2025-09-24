@@ -55,11 +55,8 @@ export function TickerSearch({ strategyType = 'long_strangle', expirationDate }:
         return updated;
       });
 
-      // Delay invalidation to prevent immediate cache clearing
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
-      }, 2000); // Increased delay to ensure database commit
+      // REMOVED delayed invalidation to prevent cascading requests
+      // The optimistic update above is sufficient
       
       setSymbol("");
       

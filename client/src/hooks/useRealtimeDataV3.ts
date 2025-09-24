@@ -56,8 +56,8 @@ export function useRealtimeDataV3() {
         queryKey: ["/api/portfolio/summary"], 
         refetchType: "inactive" 
       });
-    }, 2000); // 2 second debounce to prevent spam
-  }, [queryClient]);
+    }, 3000); // Increased to 3 seconds to prevent rapid invalidations
+  }, []); // Remove queryClient from deps to prevent recreation
 
   const connect = () => {
     if (!user?.id) {
