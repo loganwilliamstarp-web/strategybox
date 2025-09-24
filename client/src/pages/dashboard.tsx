@@ -16,7 +16,7 @@ import { StrategyScreener } from "@/components/strategy-screener";
 import { MarketSentiment } from "@/components/market-sentiment";
 import { PerformanceStoryTeller } from "@/components/performance-storyteller";
 import { RiskMeter } from "@/components/risk-meter";
-import { OptionsChainComponent } from "@/components/options-chain";
+import { SchwabOptionsChain } from "@/components/schwab-options-chain";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
 import { PriceAlerts } from "@/components/price-alerts";
@@ -841,20 +841,12 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Options Chain Modal */}
-        <OptionsChainComponent 
+        {/* Schwab-Style Options Chain Modal */}
+        <SchwabOptionsChain 
           symbol={selectedOptionsSymbol}
           isOpen={isOptionsChainOpen}
           selectedExpiration={selectedExpiration}
           onExpirationChange={handleExpirationChange}
-          userCallStrike={(() => {
-            const ticker = tickers.find(t => t.symbol === selectedOptionsSymbol);
-            return ticker?.position.longCallStrike;
-          })()}
-          userPutStrike={(() => {
-            const ticker = tickers.find(t => t.symbol === selectedOptionsSymbol);
-            return ticker?.position.longPutStrike;
-          })()}
           onClose={() => {
             setIsOptionsChainOpen(false);
             setSelectedOptionsSymbol("");
