@@ -55,11 +55,10 @@ class MarketDataApiService implements OptionsDataProvider {
   private readonly MIN_REQUEST_INTERVAL = 50; // Minimal delay for paid plan
 
   constructor() {
-    this.apiKey = process.env.MARKETDATA_API_KEY || '';
-    this.finnhubApiKey = process.env.FINNHUB_API_KEY || '';
-    if (!this.apiKey && !this.finnhubApiKey) {
-      console.warn('⚠️  No market data API keys configured in environment, will try Supabase Vault');
-    }
+    // 🔒 SECURITY: API keys ONLY from Supabase Vault - no environment fallbacks
+    this.apiKey = '';
+    this.finnhubApiKey = '';
+    console.log('🔒 MarketData API service initialized - keys will load from Supabase Vault only');
   }
 
   // Initialize API keys from Supabase Vault
@@ -87,26 +86,18 @@ class MarketDataApiService implements OptionsDataProvider {
         const keyPreview = vaultApiKey.substring(0, 8) + '...' + vaultApiKey.substring(vaultApiKey.length - 4);
         console.log(`✅ MarketData API key CONFIRMED from Vault: ${keyPreview} (${vaultApiKey.length} chars)`);
       } else {
-        console.log(`❌ Vault key invalid for MARKETDATA_API_KEY: "${vaultApiKey}"`);
-        
-        // Try environment as fallback
-        if (process.env.MARKETDATA_API_KEY && process.env.MARKETDATA_API_KEY.length > 15) {
-          this.apiKey = process.env.MARKETDATA_API_KEY;
-          const keyPreview = this.apiKey.substring(0, 8) + '...' + this.apiKey.substring(this.apiKey.length - 4);
-          console.log(`✅ MarketData API key loaded from environment: ${keyPreview} (${this.apiKey.length} chars)`);
-        } else {
-          console.error(`❌ No valid MarketData API key found anywhere!`);
-        }
+        console.error(`❌ SECURITY: No valid MarketData API key found in Supabase Vault: "${vaultApiKey}"`);
+        console.error(`❌ SECURITY: Environment fallbacks disabled - only Supabase Vault keys allowed`);
       }
       
-      // Load Finnhub API key from Supabase Vault
+      // Load Finnhub API key from Supabase Vault ONLY
       const vaultFinnhubKey = await SupabaseSecrets.getSecret('FINNHUB_API_KEY');
       if (vaultFinnhubKey && vaultFinnhubKey.length > 10) {
         this.finnhubApiKey = vaultFinnhubKey;
         console.log(`✅ Finnhub API key loaded from Vault (${vaultFinnhubKey.length} chars)`);
-      } else if (process.env.FINNHUB_API_KEY && process.env.FINNHUB_API_KEY.length > 10) {
-        this.finnhubApiKey = process.env.FINNHUB_API_KEY;
-        console.log(`✅ Finnhub API key loaded from environment (${this.finnhubApiKey.length} chars)`);
+      } else {
+        console.error(`❌ SECURITY: No valid Finnhub API key found in Supabase Vault`);
+        console.error(`❌ SECURITY: Environment fallbacks disabled - only Supabase Vault keys allowed`);
       }
       
       // FINAL VALIDATION
@@ -115,7 +106,8 @@ class MarketDataApiService implements OptionsDataProvider {
       console.log(`   Finnhub: ${this.finnhubApiKey ? 'SET' : 'MISSING'} (${this.finnhubApiKey?.length || 0} chars)`);
       
       if (!this.apiKey && !this.finnhubApiKey) {
-        console.warn('⚠️  No market data API keys found in Vault or environment');
+        console.error('🔒 SECURITY: No market data API keys found in Supabase Vault');
+        console.error('🔒 SECURITY: Environment variable access disabled for enhanced security');
       }
     } catch (error) {
       console.error('❌ Failed to load API keys from Vault:', error);

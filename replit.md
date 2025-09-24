@@ -39,10 +39,12 @@ Preferred communication style: Simple, everyday language.
 - **WebSocket Management**: Optimized connection pooling and user-based subscriptions
 
 ### Security & Rate Limiting
+- **API Key Security**: ALL API keys exclusively loaded from Supabase vault with zero environment fallbacks
 - **Rate Limiting**: Configurable limits per endpoint type with automatic cleanup
 - **CORS**: Configured for development and production environments
 - **Input Validation**: Comprehensive validation for all API endpoints
 - **Error Handling**: Structured error responses with correlation IDs
+- **Secure Credential Management**: MarketData.app and Finnhub API keys managed via Supabase secrets vault
 
 ### Mobile Architecture
 - **Capacitor Integration**: Native iOS/Android app generation from web codebase
