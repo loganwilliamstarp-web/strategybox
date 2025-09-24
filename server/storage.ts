@@ -25,15 +25,8 @@ import {
   type CreatePriceAlertRequest,
   type ExitRecommendation,
   type InsertExitRecommendation,
-  // Import the actual table definitions
-  tickers,
-  users,
-  longStranglePositions,
-  optionsChains,
-  priceAlerts,
-  exitRecommendations,
 } from "@shared/schema";
-import { eq, and, isNotNull } from "drizzle-orm";
+import { eq, and, isNotNull, sql } from "drizzle-orm";
 import { db } from "./db";
 import { calculateExpectedMove } from "./utils/expectedMove";
 import { handleDbError } from "./plugins/dbFallbackGuard";
@@ -607,13 +600,53 @@ export class DatabaseStorage implements IStorage {
   // REMOVED: Mock data generation function - system now exclusively uses real market data from marketdata.app
 
   async updateOptionsChain(symbol: string, chains: InsertOptionsChain[]): Promise<void> {
-    // Delete existing chains for this symbol
-    await db.delete(optionsChains).where(eq(optionsChains.symbol, symbol));
+    console.log(`💾 UPSERT: updateOptionsChain called for ${symbol} with ${chains.length} chains`);
     
-    // Insert new chains
-    if (chains.length > 0) {
-      await db.insert(optionsChains).values(chains);
+    if (chains.length === 0) {
+      console.log(`⚠️ No chains to update for ${symbol}`);
+      return;
     }
+
+    // Manual upsert pattern: check if exists, then update or insert
+    for (const chain of chains) {
+      const existing = await db
+        .select()
+        .from(optionsChains)
+        .where(
+          and(
+            eq(optionsChains.symbol, chain.symbol),
+            eq(optionsChains.expirationDate, chain.expirationDate),
+            eq(optionsChains.strike, chain.strike),
+            eq(optionsChains.optionType, chain.optionType)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        // Update existing record
+        await db
+          .update(optionsChains)
+          .set({
+            bid: chain.bid,
+            ask: chain.ask,
+            lastPrice: chain.lastPrice,
+            volume: chain.volume,
+            openInterest: chain.openInterest,
+            impliedVolatility: chain.impliedVolatility,
+            delta: chain.delta,
+            gamma: chain.gamma,
+            theta: chain.theta,
+            vega: chain.vega,
+            updatedAt: sql`NOW()`
+          })
+          .where(eq(optionsChains.id, existing[0].id));
+      } else {
+        // Insert new record
+        await db.insert(optionsChains).values(chain);
+      }
+    }
+    
+    console.log(`✅ UPSERT: Successfully upserted ${chains.length} chains for ${symbol}`);
   }
 
   async saveOptionsChain(symbol: string, chainData: OptionsChainData): Promise<void> {
