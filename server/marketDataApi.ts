@@ -542,61 +542,20 @@ class MarketDataApiService implements OptionsDataProvider {
       
       console.log(`✅ COMPLETE CHAIN: ${symbol} - ${allOptionsByExpiration.length} total options across ${uniqueExpirations.length} expirations`);
 
+      // FINAL SUMMARY LOGGING
+      if (symbol === 'AAPL') {
+        console.log(`🍎 AAPL FINAL SUMMARY:`);
+        const expirations = [...new Set(allOptionsByExpiration.map(opt => opt.expiration_date))].sort();
+        console.log(`   Available expirations: ${expirations.join(', ')}`);
+        console.log(`   Total options: ${allOptionsByExpiration.length} across dates: ${expirations.join(', ')}`);
+      }
+
       // Transform flat options array into chains structure
       const chains: { [expirationDate: string]: { calls: OptionContract[], puts: OptionContract[] } } = {};
       const expirationDates: string[] = [];
       
       // Group options by expiration date and type
       for (const option of allOptionsByExpiration) {
-        const expDate = option.expiration_date;
-        const impliedVolatility = chainData.iv?.[i];
-        
-        // Calculate mid price if bid/ask available
-        const midPrice = (bid > 0 && ask > 0) ? (bid + ask) / 2 : last;
-        
-        // DETAILED AAPL COMPREHENSIVE CONTRACT LOGGING
-        if (symbol === 'AAPL' && i < 5) {
-          console.log(`🍎 AAPL COMPREHENSIVE CONTRACT ${i+1} - ${optionSymbol}:`);
-          console.log(`   Side: ${side}, Strike: ${strike}, Exp: ${expirationDate}`);
-          console.log(`   BID: $${bid.toFixed(4)}, ASK: $${ask.toFixed(4)}, MID: $${midPrice.toFixed(4)}`);
-        }
-        
-        allOptions.push({
-          ticker: optionSymbol,
-          strike: strike,
-          expiration_date: expirationDate,
-          contract_type: side as 'call' | 'put',
-          bid: Math.max(0.01, bid),
-          ask: Math.max(0.01, ask || bid || last || 0.01),
-          last: Math.max(0.01, last || midPrice || 0.01),
-          volume,
-          open_interest: openInterest,
-          implied_volatility: impliedVolatility,
-          delta: chainData.delta?.[i],
-          gamma: chainData.gamma?.[i],
-          theta: chainData.theta?.[i],
-          vega: chainData.vega?.[i],
-          expirationLabel: expirationDate,
-          daysUntilExpiration: chainData.dte?.[i] || Math.ceil((new Date(expirationDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
-        });
-      }
-
-      // FINAL AAPL SUMMARY LOGGING
-      if (symbol === 'AAPL') {
-        console.log(`🍎 AAPL FINAL SUMMARY:`);
-        const expirations = [...new Set(allOptions.map(opt => opt.expiration_date))].sort();
-        console.log(`   Available expirations: ${expirations.join(', ')}`);
-        console.log(`   Total options: ${allOptions.length} across dates: ${expirations.join(', ')}`);
-      }
-      
-      console.log(`✅ COMPREHENSIVE REAL CHAIN: ${symbol} - ${allOptions.length} total options across multiple expirations`);
-
-      // Transform flat options array into chains structure
-      const chains: { [expirationDate: string]: { calls: OptionContract[], puts: OptionContract[] } } = {};
-      const expirationDates: string[] = [];
-      
-      // Group options by expiration date and type
-      for (const option of allOptions) {
         const expDate = option.expiration_date;
         
         if (!chains[expDate]) {
@@ -617,7 +576,7 @@ class MarketDataApiService implements OptionsDataProvider {
         chains[expDate].puts.sort((a, b) => a.strike - b.strike);
       }
       
-      const sortedOptions = allOptions.sort((a, b) => {
+      const sortedOptions = allOptionsByExpiration.sort((a, b) => {
         // Sort by expiration first, then by strike
         if (a.expiration_date !== b.expiration_date) {
           return a.expiration_date.localeCompare(b.expiration_date);
@@ -625,7 +584,7 @@ class MarketDataApiService implements OptionsDataProvider {
         return a.strike - b.strike;
       });
       
-      console.log(`🔧 TRANSFORMED OPTIONS CHAIN for ${symbol}: ${Object.keys(chains).length} expirations, ${allOptions.length} total options`);
+      console.log(`🔧 TRANSFORMED OPTIONS CHAIN for ${symbol}: ${Object.keys(chains).length} expirations, ${allOptionsByExpiration.length} total options`);
       
       return {
         symbol,
