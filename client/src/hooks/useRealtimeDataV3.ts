@@ -65,7 +65,7 @@ export function useRealtimeDataV3() {
               break;
             case 'initial_data':
               console.log('📊 WebSocket: Received initial data');
-              // Invalidate ticker cache to get fresh data
+              // Just invalidate - let React Query handle the refetch timing
               queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
               queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
               break;
@@ -73,14 +73,9 @@ export function useRealtimeDataV3() {
               // Handle both message formats: individual symbol updates and batch ticker updates
               if (message.tickers && Array.isArray(message.tickers)) {
                 console.log('💰 WebSocket: Batch price update received', message.tickers.length, 'tickers');
-                console.log('💰 WebSocket: Batch ticker data:', JSON.stringify(message.tickers, null, 2));
-                // Batch update format - remove cache completely and refetch
-                console.log('🔄 WebSocket: Removing ticker cache completely...');
-                queryClient.removeQueries({ queryKey: ["/api/tickers"] });
-                queryClient.removeQueries({ queryKey: ["/api/portfolio/summary"] });
-                console.log('🔄 WebSocket: Refetching ticker data...');
-                queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
-                queryClient.refetchQueries({ queryKey: ["/api/portfolio/summary"] });
+                // Just invalidate - let React Query's staleTime handle the refetch timing
+                queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
                 // Invalidate options chain cache for all tickers
                 message.tickers.forEach((ticker: any) => {
                   if (ticker.symbol) {
@@ -89,32 +84,20 @@ export function useRealtimeDataV3() {
                 });
               } else if (message.symbol) {
                 console.log('💰 WebSocket: Individual price update for', message.symbol);
-                // Individual update format - remove cache completely and refetch
-                console.log('🔄 WebSocket: Removing ticker cache completely...');
-                queryClient.removeQueries({ queryKey: ["/api/tickers"] });
-                queryClient.removeQueries({ queryKey: ["/api/portfolio/summary"] });
-                console.log('🔄 WebSocket: Refetching ticker data...');
-                queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
-                queryClient.refetchQueries({ queryKey: ["/api/portfolio/summary"] });
+                // Just invalidate - let React Query's staleTime handle the refetch timing
+                queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
                 // Invalidate options chain cache for the specific symbol
                 queryClient.invalidateQueries({ queryKey: ["/api/market-data/options-chain", message.symbol] });
               }
               break;
             case 'premium_update':
               console.log('💎 WebSocket: Premium update received');
-              // Force immediate refetch of all data
+              // Just invalidate - React Query will refetch based on component needs
               queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
               queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
-              queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
-              queryClient.refetchQueries({ queryKey: ["/api/portfolio/summary"] });
-              // Invalidate and refetch options chain cache for all symbols
+              // Invalidate options chain cache for all symbols
               queryClient.invalidateQueries({ 
-                predicate: (query) => {
-                  const queryKey = query.queryKey[0];
-                  return typeof queryKey === 'string' && queryKey.includes('/api/market-data/options-chain');
-                }
-              });
-              queryClient.refetchQueries({ 
                 predicate: (query) => {
                   const queryKey = query.queryKey[0];
                   return typeof queryKey === 'string' && queryKey.includes('/api/market-data/options-chain');
@@ -123,16 +106,13 @@ export function useRealtimeDataV3() {
               break;
             case 'options_update':
               console.log('📊 WebSocket: Options update received for', message.symbol);
-              // Force immediate refetch of options chain data for the specific symbol
+              // Just invalidate - let React Query handle timing based on component visibility
               if (message.symbol) {
-                queryClient.removeQueries({ queryKey: ["/api/market-data/options-chain", message.symbol] });
-                queryClient.refetchQueries({ queryKey: ["/api/market-data/options-chain", message.symbol] });
+                queryClient.invalidateQueries({ queryKey: ["/api/market-data/options-chain", message.symbol] });
               }
               // Also invalidate ticker data as options updates might affect position values
               queryClient.invalidateQueries({ queryKey: ["/api/tickers"] });
               queryClient.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
-              queryClient.refetchQueries({ queryKey: ["/api/tickers"] });
-              queryClient.refetchQueries({ queryKey: ["/api/portfolio/summary"] });
               break;
             case 'error':
               console.error('❌ WebSocket: Server error', message.message);

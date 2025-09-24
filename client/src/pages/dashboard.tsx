@@ -351,11 +351,11 @@ export default function Dashboard() {
   
   const { data: allTickers = [], isLoading: tickersLoading, refetch } = useQuery<TickerWithPosition[]>({
     queryKey: ["/api/tickers"], // Single source of truth from database
-    refetchInterval: 0, // NO automatic refetching - manual control only
-    staleTime: 0, // ALWAYS consider data stale - force fresh fetch every time
-    gcTime: 0, // NO garbage collection time - don't cache anything
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    refetchOnMount: true, // Always refetch on mount
+    refetchInterval: optimalIntervals.refetchInterval, // Use market-aware intervals
+    staleTime: 30 * 1000, // Consider data fresh for 30 seconds to prevent spam
+    gcTime: 5 * 60 * 1000, // Keep cached for 5 minutes
+    refetchOnWindowFocus: false, // Disable aggressive refetching - WebSocket handles updates
+    refetchOnMount: true, // Refetch once on mount
     refetchIntervalInBackground: false, // Let WebSocket handle background updates
     onSuccess: (data) => {
       console.log('📊 Dashboard: Ticker data updated', data.length, 'tickers');
