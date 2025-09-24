@@ -91,15 +91,25 @@ export class DatabaseStorage implements IStorage {
     // Initialize real user data in Supabase
     this.initializeRealUserData();
     
-          // Run expected move migration for existing positions (async)
-          this.runExpectedMoveMigration().catch(error => {
-            console.error('❌ Expected move migration failed:', error);
-          });
+    // Initialize test user data
+    this.initializeMockData().catch(error => {
+      console.error('❌ Mock data initialization failed:', error);
+    });
+    
+    // Run expected move migration for existing positions (async)
+    this.runExpectedMoveMigration().catch(error => {
+      console.error('❌ Expected move migration failed:', error);
+    });
 
-          // Run expiration date migration for existing positions (async)
-          this.runExpirationDateMigration().catch(error => {
-            console.error('❌ Expiration date migration failed:', error);
-          });
+    // Run expiration date migration for existing positions (async)
+    this.runExpirationDateMigration().catch(error => {
+      console.error('❌ Expiration date migration failed:', error);
+    });
+
+    // Debug expiration dates (async)
+    this.debugExpirationDates().catch(error => {
+      console.error('❌ Debug expiration dates failed:', error);
+    });
     
     console.log('🔧 DatabaseStorage initialized - using real Supabase database');
   }
@@ -121,6 +131,16 @@ export class DatabaseStorage implements IStorage {
             await migrateExpirationDates();
           } catch (error) {
             console.error('❌ Expiration date migration failed:', error);
+          }
+        }
+
+        private async debugExpirationDates() {
+          try {
+            // Import and run the debug utility
+            const { debugExpirationDates } = await import('./utils/debugExpirationDates');
+            await debugExpirationDates();
+          } catch (error) {
+            console.error('❌ Debug expiration dates failed:', error);
           }
         }
 
@@ -189,6 +209,96 @@ export class DatabaseStorage implements IStorage {
     const existingUser = await this.getUser("test-user-id");
     if (!existingUser) {
       await db.insert(users).values(testUserData).onConflictDoNothing();
+      console.log('✅ Created test user: test@options.com');
+    } else {
+      console.log('✅ Test user test@options.com already exists');
+    }
+    
+    // Always check if test user has tickers, if not create them
+    const existingTickers = await this.getActiveTickersForUser("test-user-id");
+    if (existingTickers.length === 0) {
+      console.log('📊 Creating sample data for test user...');
+      await this.createTestUserData();
+    }
+  }
+
+  private async createTestUserData() {
+    try {
+      const testUserId = "test-user-id";
+      
+      // Create sample tickers for test user
+      const sampleTickers = [
+        {
+          userId: testUserId,
+          symbol: 'AAPL',
+          companyName: 'Apple Inc.',
+          currentPrice: 175.50,
+          priceChange: 2.30,
+          priceChangePercent: 1.33,
+          earningsDate: null,
+          isActive: true,
+        },
+        {
+          userId: testUserId,
+          symbol: 'NVDA',
+          companyName: 'NVIDIA Corporation',
+          currentPrice: 875.28,
+          priceChange: 15.75,
+          priceChangePercent: 1.83,
+          earningsDate: null,
+          isActive: true,
+        },
+        {
+          userId: testUserId,
+          symbol: 'QQQ',
+          companyName: 'Invesco QQQ Trust',
+          currentPrice: 485.32,
+          priceChange: 8.25,
+          priceChangePercent: 1.73,
+          earningsDate: null,
+          isActive: true,
+        }
+      ];
+
+      for (const tickerData of sampleTickers) {
+        const ticker = await this.createTicker(tickerData);
+        
+        // Create long strangle position (default strategy)
+        const position: InsertLongStranglePosition = {
+          tickerId: ticker.id,
+          userId: testUserId,
+          strategyType: 'long_strangle',
+          longPutStrike: tickerData.currentPrice * 0.95,
+          longCallStrike: tickerData.currentPrice * 1.05,
+          longPutPremium: 3.85,
+          longCallPremium: 3.90,
+          shortPutStrike: null,
+          shortCallStrike: null,
+          shortPutPremium: null,
+          shortCallPremium: null,
+          longExpiration: null,
+          shortExpiration: null,
+          lowerBreakeven: (tickerData.currentPrice * 0.95) - 7.75,
+          upperBreakeven: (tickerData.currentPrice * 1.05) + 7.75,
+          maxLoss: 7.75,
+          maxProfit: null,
+          atmValue: tickerData.currentPrice,
+          impliedVolatility: 0.25,
+          ivPercentile: 50,
+          daysToExpiry: 30,
+          expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          strikesManuallySelected: false,
+          customCallStrike: null,
+          customPutStrike: null,
+          expirationCycleForCustomStrikes: null,
+        };
+
+        await this.createPosition(position);
+      }
+
+      console.log('✅ Created sample data for test user: 3 tickers with long strangle positions');
+    } catch (error) {
+      console.error('❌ Failed to create test user data:', error);
     }
   }
 

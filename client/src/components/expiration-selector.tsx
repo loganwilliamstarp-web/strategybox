@@ -37,11 +37,17 @@ export function ExpirationSelector({ value, onValueChange, className = "" }: Exp
 
   const expirations = generateExpirations();
 
+  // Debug logging
+  console.log('🔍 ExpirationSelector Debug:', {
+    value,
+    expirations: expirations.map(e => ({ value: e.value, label: e.label }))
+  });
+
   return (
     <div className={className} data-testid="expiration-selector">
       <Select value={value} onValueChange={onValueChange}>
         <SelectTrigger id="expiration-select" className="w-full" data-testid="select-expiration">
-          <SelectValue placeholder="Select expiration date" />
+          <SelectValue placeholder={value ? undefined : "Select expiration date"} />
         </SelectTrigger>
         <SelectContent>
           {expirations.map((exp, index) => (

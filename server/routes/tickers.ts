@@ -113,10 +113,16 @@ export function registerTickerRoutes(app: Express): void {
   
   // Get active tickers with their positions
   app.get("/api/tickers", requireAuth, rateLimitRules.general, async (req: any, res) => {
-    console.log(`🚨 /api/tickers CALLED! User ID: ${req.user?.id}, Auth status: ${!!req.user}`);
+    console.log(`🚨 /api/tickers CALLED! User ID: ${req.user?.id}, Email: ${req.user?.email}, Auth status: ${!!req.user}`);
     
     try {
       const userId = req.user.id;
+      console.log(`🔍 Fetching tickers for user ID: ${userId}`);
+      
+      // Debug: Check what tickers exist for this user
+      const allTickers = await storage.getActiveTickersForUser(userId);
+      console.log(`📊 Found ${allTickers.length} active tickers for user ${userId}:`, allTickers.map(t => t.symbol));
+      
       const tickers = await storage.getActiveTickersWithPositionsForUser(userId);
       
       // Check for query parameters to force updates
