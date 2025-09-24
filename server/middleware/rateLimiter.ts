@@ -4,6 +4,7 @@ interface RateLimitRule {
   windowMs: number;
   maxRequests: number;
   message?: string;
+  keyGenerator?: (req: Request) => string;
 }
 
 interface ClientRecord {
@@ -12,33 +13,53 @@ interface ClientRecord {
   blockExpiry?: number;
 }
 
+interface RateLimitEntry {
+  clients: Map<string, ClientRecord>;
+  cleanupInterval: NodeJS.Timeout;
+}
+
 /**
  * In-memory rate limiter with configurable rules per endpoint
  */
 export class RateLimiter {
-  private clients = new Map<string, ClientRecord>();
-  private cleanupInterval: NodeJS.Timeout;
+  private rules = new Map<RateLimitRule, RateLimitEntry>();
 
-  constructor() {
-    // Clean up expired records every 5 minutes
-    this.cleanupInterval = setInterval(() => {
-      this.cleanup();
-    }, 5 * 60 * 1000);
+  private defaultKeyGenerator(req: Request): string {
+    const ip = req.ip || (req.connection as any)?.remoteAddress || 'unknown';
+    const userAgent = req.get('User-Agent') || 'unknown';
+    return `${ip}:${userAgent.substring(0, 50)}`;
+  }
+
+  private getEntry(rule: RateLimitRule): RateLimitEntry {
+    let entry = this.rules.get(rule);
+    if (!entry) {
+      entry = {
+        clients: new Map<string, ClientRecord>(),
+        cleanupInterval: setInterval(() => {
+          this.cleanup(entry!);
+        }, 5 * 60 * 1000)
+      };
+      this.rules.set(rule, entry);
+    }
+    return entry;
   }
 
   /**
    * Create rate limit middleware
    */
   create(rule: RateLimitRule) {
+    const entry = this.getEntry(rule);
+
     return (req: Request, res: Response, next: NextFunction) => {
-      const clientId = this.getClientId(req);
+      const keyGenerator = rule.keyGenerator || this.defaultKeyGenerator.bind(this);
+      const clientId = keyGenerator(req);
       const now = Date.now();
 
       // Get or create client record
-      let client = this.clients.get(clientId);
+      let client = entry.clients.get(clientId);
       if (!client) {
         client = { requests: [], blocked: false };
-        this.clients.set(clientId, client);
+        entry.clients.set(clientId, client);
       }
 
       // Check if client is currently blocked
@@ -99,28 +120,19 @@ export class RateLimiter {
   }
 
   /**
-   * Get client identifier (IP + User-Agent for better uniqueness)
-   */
-  private getClientId(req: Request): string {
-    const ip = req.ip || req.connection.remoteAddress || 'unknown';
-    const userAgent = req.get('User-Agent') || 'unknown';
-    return `${ip}:${userAgent.substring(0, 50)}`;
-  }
-
-  /**
    * Clean up expired client records
    */
-  private cleanup(): void {
+  private cleanup(entry: RateLimitEntry): void {
     const now = Date.now();
     let cleanedCount = 0;
 
-    for (const [clientId, client] of this.clients.entries()) {
+    for (const [clientId, client] of entry.clients.entries()) {
       // Remove clients with no recent requests and not blocked
       const hasRecentRequests = client.requests.some(timestamp => now - timestamp < 60 * 60 * 1000); // 1 hour
       const isBlocked = client.blocked && client.blockExpiry && now < client.blockExpiry;
 
       if (!hasRecentRequests && !isBlocked) {
-        this.clients.delete(clientId);
+        entry.clients.delete(clientId);
         cleanedCount++;
       }
     }
@@ -134,21 +146,33 @@ export class RateLimiter {
    * Get current stats
    */
   getStats(): Record<string, any> {
-    const activeClients = this.clients.size;
-    const blockedClients = Array.from(this.clients.values()).filter(c => c.blocked).length;
-    
-    return {
-      activeClients,
-      blockedClients,
-      timestamp: Date.now()
-    };
+    const stats: Record<string, any> = {};
+
+    let index = 0;
+    for (const [rule, entry] of this.rules.entries()) {
+      const key = rule.message || `rule-${index}`;
+      const activeClients = entry.clients.size;
+      const blockedClients = Array.from(entry.clients.values()).filter(c => c.blocked).length;
+
+      stats[key] = {
+        activeClients,
+        blockedClients,
+        timestamp: Date.now()
+      };
+      index++;
+    }
+
+    return stats;
   }
 
   /**
    * Reset rate limits for a client (admin function)
    */
-  resetClient(clientId: string): boolean {
-    const client = this.clients.get(clientId);
+  resetClient(rule: RateLimitRule, clientId: string): boolean {
+    const entry = this.rules.get(rule);
+    if (!entry) return false;
+
+    const client = entry.clients.get(clientId);
     if (client) {
       client.requests = [];
       client.blocked = false;
@@ -162,10 +186,11 @@ export class RateLimiter {
    * Cleanup on shutdown
    */
   destroy(): void {
-    if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval);
+    for (const [, entry] of this.rules) {
+      clearInterval(entry.cleanupInterval);
+      entry.clients.clear();
     }
-    this.clients.clear();
+    this.rules.clear();
   }
 }
 

@@ -52,33 +52,12 @@ export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpirat
   // Force refresh options chain data when modal opens to ensure fresh data
   useEffect(() => {
     if (isOpen && symbol) {
-      console.log(`🔄 Options chain modal opened for ${symbol} - AGGRESSIVELY clearing all caches`);
-      
-      // AGGRESSIVE CACHE CLEARING - Remove ALL related queries
-      queryClient.removeQueries({ 
-        predicate: (query) => {
-          const queryKey = query.queryKey[0];
-          return typeof queryKey === 'string' && (
-            queryKey.includes('/api/tickers') ||
-            queryKey.includes('/api/market-data/options-chain') ||
-            queryKey.includes('/api/portfolio/summary')
-          );
-        }
-      });
-      
-      // Force immediate fresh data fetch with safe invalidation
-      queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
-      queryClient.refetchQueries({ 
-        predicate: (query) => {
-          const queryKey = query.queryKey[0];
-          return typeof queryKey === 'string' && queryKey.includes('/api/market-data/options-chain');
-        }
-      });
-      
-      // Force refresh options chain
+      console.log(`🔄 Options chain modal opened for ${symbol} - refreshing modal data only`);
+
+      // Refresh the modal's own data without clearing unrelated caches
       forceRefresh();
     }
-  }, [isOpen, symbol, forceRefresh, queryClient]);
+  }, [isOpen, symbol, forceRefresh]);
 
   // Sync with dashboard expiration selection
   useEffect(() => {
@@ -99,16 +78,13 @@ export function OptionsChainComponent({ symbol, isOpen, onClose, selectedExpirat
     if (onExpirationChange) {
       onExpirationChange(newExpiration);
     }
-    // Force refresh dashboard data to ensure consistency
-    queryClient.removeQueries({ queryKey: ["/api/tickers"] });
+    // Debounce dashboard refresh to avoid rapid invalidations
     queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
   };
 
   // Handle modal close with data refresh
   const handleClose = () => {
-    console.log(`🔄 Options chain modal closing - forcing dashboard data refresh`);
-    // Force refresh dashboard data when modal closes to ensure consistency
-    queryClient.removeQueries({ queryKey: ["/api/tickers"] });
+    console.log(`🔄 Options chain modal closing - marking dashboard data stale`);
     queryClient.invalidateQueries({ queryKey: ["/api/tickers"], refetchType: "inactive" });
     onClose();
   };

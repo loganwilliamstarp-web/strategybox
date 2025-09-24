@@ -303,47 +303,16 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  // Automatic data refresh on page load for efficient testing
+  // Skip automatic refreshes to respect rate limits. Users can refresh manually.
   useEffect(() => {
-    if (user && isRealtimeConnected) {
-      console.log('🔄 Dashboard mounted - triggering automatic data refresh for testing');
-      
-      // Trigger enhanced refresh to get latest market data (prices + options)
-      const refreshData = async () => {
-        setIsAutoRefreshing(true);
-        try {
-          const response = await apiRequest('/api/tickers/refresh-earnings', {
-            method: 'POST',
-          });
-          
-          if (response.success) {
-            console.log('✅ Automatic refresh completed:', response.message);
-            toast({
-              title: "Market Data Refreshed",
-              description: response.pricesUpdated && response.optionsUpdated
-                ? `Updated ${response.pricesUpdated} prices and ${response.optionsUpdated} options with latest market data`
-                : response.tickersUpdated > 0 
-                  ? `Updated ${response.tickersUpdated} tickers with latest market data`
-                  : "No tickers with positions found to refresh",
-              duration: 4000,
-            });
-          } else {
-            console.warn('⚠️ Automatic refresh returned success: false');
-          }
-        } catch (error) {
-          console.warn('⚠️ Automatic refresh failed:', error);
-          // Don't show error toast for automatic refresh failures
-        } finally {
-          setIsAutoRefreshing(false);
-        }
-      };
-      
-      // Small delay to ensure WebSocket is fully connected
-      const timeoutId = setTimeout(refreshData, 1000);
-      
-      return () => clearTimeout(timeoutId);
+    const warnedKey = 'dashboard-auto-refresh-warning-shown';
+    const hasWarned = sessionStorage.getItem(warnedKey);
+
+    if (user && isRealtimeConnected && !hasWarned) {
+      console.log('⚠️ Skipping automatic refresh to avoid rate limits. Use the Refresh button if needed.');
+      sessionStorage.setItem(warnedKey, '1');
     }
-  }, [user, isRealtimeConnected, toast]);
+  }, [user, isRealtimeConnected]);
 
   
   // Get market-aware refresh intervals
