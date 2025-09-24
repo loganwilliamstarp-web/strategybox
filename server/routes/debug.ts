@@ -1,6 +1,6 @@
 // Debug endpoint to see raw ticker data
 import type { Express } from "express";
-import { requireAuth } from "../auth";
+import { requireSupabaseAuth } from "../supabaseAuth";
 import { storage } from "../storage";
 import { marketDataApiService } from "../marketDataApi";
 
@@ -717,7 +717,7 @@ export function setupDebugRoutes(app: Express) {
   });
 
   // Test endpoint to verify debug routes are working
-  app.get('/api/debug/test-atm', requireAuth, async (req: any, res) => {
+  app.get('/api/debug/test-atm', requireSupabaseAuth, async (req: any, res) => {
     res.json({ 
       success: true, 
       message: 'Debug ATM endpoint is working',
@@ -727,7 +727,7 @@ export function setupDebugRoutes(app: Express) {
   });
 
   // Add missing database columns
-  app.post('/api/debug/add-missing-columns', requireAuth, async (req: any, res) => {
+  app.post('/api/debug/add-missing-columns', requireSupabaseAuth, async (req: any, res) => {
     try {
       console.log('🔧 Adding missing database columns...');
       
@@ -819,7 +819,7 @@ export function setupDebugRoutes(app: Express) {
   });
 
   // Fix ATM values by setting them to stock prices from last expiration (previous Friday)
-  app.post('/api/debug/fix-atm-from-last-expiration', requireAuth, async (req: any, res) => {
+  app.post('/api/debug/fix-atm-from-last-expiration', requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user?.id;
       if (!userId) {

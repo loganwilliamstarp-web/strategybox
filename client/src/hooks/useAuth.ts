@@ -1,20 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
+import { supabase, getCurrentUser, getAccessToken, apiRequestWithAuth } from "@/lib/supabaseAuth";
 
 export function useAuth() {
   const { data: user, isLoading, error } = useQuery({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
-      const res = await fetch("/api/auth/user", { credentials: "include", cache: "no-store" });
-      if (res.ok) {
-        const userData = await res.json();
-        console.log('✅ Regular auth successful:', userData.email);
+      try {
+        // First check if we have a current Supabase session
+        const currentUser = getCurrentUser();
+        const token = getAccessToken();
+        
+        if (!currentUser || !token) {
+          console.log('❌ No Supabase session found');
+          return null;
+        }
+
+        // Verify with backend
+        const userData = await apiRequestWithAuth("/api/auth/user");
+        console.log('✅ Supabase auth successful:', userData.email);
         return userData;
-      }
-      if (res.status === 401) {
-        console.log('❌ Not authenticated (auth endpoint returned 401)');
+      } catch (error) {
+        console.log('❌ Supabase auth failed:', error);
         return null;
       }
-      throw new Error(`Failed to fetch user (${res.status})`);
     },
     retry: false,
     refetchOnWindowFocus: false,

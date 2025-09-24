@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { apiRequestWithAuth } from "./supabaseAuth";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -16,26 +17,11 @@ export async function apiRequest(
 ): Promise<any> {
   const { method = "GET", data } = options || {};
   
-  const res = await fetch(url, {
+  // Use Supabase auth for API requests
+  return await apiRequestWithAuth(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
   });
-
-  await throwIfResNotOk(res);
-  
-  // Check if response has content to parse as JSON
-  const contentType = res.headers.get("content-type");
-  if (contentType && contentType.includes("application/json")) {
-    const text = await res.text();
-    if (text.trim()) {
-      return JSON.parse(text);
-    }
-  }
-  
-  // Return empty object for successful requests with no JSON content
-  return {};
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -44,16 +30,14 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
-    });
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    try {
+      return await apiRequestWithAuth(queryKey.join("/") as string);
+    } catch (error: any) {
+      if (unauthorizedBehavior === "returnNull" && error.message.includes("401")) {
+        return null;
+      }
+      throw error;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({

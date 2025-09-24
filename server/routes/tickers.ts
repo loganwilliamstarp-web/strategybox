@@ -1,6 +1,5 @@
 import type { Express } from "express";
-import { requireAuth } from "../auth";
-import { requireTokenAuth } from "../tokenAuth";
+import { requireSupabaseAuth } from "../supabaseAuth";
 import { storage } from "../storage";
 import { addTickerSchema, StrategyType } from "@shared/schema";
 import { z } from "zod";
@@ -112,7 +111,7 @@ async function getStockQuote(symbol: string): Promise<{ currentPrice: number; ch
 export function registerTickerRoutes(app: Express): void {
   
   // Get active tickers with their positions
-  app.get("/api/tickers", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.get("/api/tickers", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     console.log(`🚨 /api/tickers CALLED! User ID: ${req.user?.id}, Email: ${req.user?.email}, Auth status: ${!!req.user}`);
     
     try {
@@ -266,7 +265,7 @@ export function registerTickerRoutes(app: Express): void {
   });
 
   // Add a new ticker (no rate limiting for normal user operations)
-  app.post("/api/tickers", requireAuth, async (req: any, res) => {
+  app.post("/api/tickers", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { symbol } = addTickerSchema.parse(req.body);
@@ -369,7 +368,7 @@ export function registerTickerRoutes(app: Express): void {
   });
 
   // Remove a ticker completely for a user (no rate limiting)
-  app.delete("/api/tickers/:symbol", requireAuth, async (req: any, res) => {
+  app.delete("/api/tickers/:symbol", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const symbol = req.params.symbol.toUpperCase();
@@ -398,7 +397,7 @@ export function registerTickerRoutes(app: Express): void {
   });
 
   // Force reset all positions to long_strangle (SIMPLE VERSION)
-  app.post("/api/tickers/force-long-strangle", requireAuth, async (req: any, res) => {
+  app.post("/api/tickers/force-long-strangle", requireSupabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const tickers = await storage.getActiveTickersWithPositionsForUser(userId);

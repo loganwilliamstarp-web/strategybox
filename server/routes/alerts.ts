@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth } from "../auth";
+import { requireSupabaseAuth } from "../supabaseAuth";
 import { storage } from "../storage";
 import { rateLimitRules } from "../middleware/rateLimiter";
 
@@ -9,7 +9,7 @@ import { rateLimitRules } from "../middleware/rateLimiter";
 export function registerAlertsRoutes(app: Express): void {
 
   // Price Alert routes
-  app.get("/api/alerts", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.get("/api/alerts", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const alerts = await storage.getPriceAlertsForUser(userId);
@@ -23,7 +23,7 @@ export function registerAlertsRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/alerts", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.post("/api/alerts", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { createPriceAlertSchema } = await import("@shared/schema");
@@ -40,7 +40,7 @@ export function registerAlertsRoutes(app: Express): void {
     }
   });
 
-  app.delete("/api/alerts/:id", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.delete("/api/alerts/:id", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const { id } = req.params;
       await storage.deletePriceAlert(id);
@@ -55,7 +55,7 @@ export function registerAlertsRoutes(app: Express): void {
   });
 
   // Exit Recommendations routes
-  app.get("/api/recommendations", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.get("/api/recommendations", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const recommendations = await storage.getExitRecommendationsForUser(userId);
@@ -69,7 +69,7 @@ export function registerAlertsRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/recommendations/:id/dismiss", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.post("/api/recommendations/:id/dismiss", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const { id } = req.params;
       await storage.dismissRecommendation(id);
@@ -84,7 +84,7 @@ export function registerAlertsRoutes(app: Express): void {
   });
 
   // Enhanced ticker route with alerts and recommendations
-  app.get("/api/tickers/enhanced", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.get("/api/tickers/enhanced", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const tickersWithAlertsAndRecs = await storage.getActiveTickersWithAlertsAndRecsForUser(userId);
@@ -99,7 +99,7 @@ export function registerAlertsRoutes(app: Express): void {
   });
 
   // AI-powered exit recommendations generation endpoint
-  app.post("/api/recommendations/generate", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.post("/api/recommendations/generate", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const tickers = await storage.getActiveTickersWithPositionsForUser(userId);

@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth } from "../auth";
+import { requireSupabaseAuth } from "../supabaseAuth";
 import { strategyFactory } from "../strategies/StrategyFactory";
 import { StrategyCalculatorAdapter } from "../strategies/StrategyCalculatorAdapter";
 import { rateLimitRules } from "../middleware/rateLimiter";
@@ -12,7 +12,7 @@ import { StrategyType, strategyTypes } from "@shared/schema";
 export function registerStrategyRoutes(app: Express): void {
 
   // Get all available strategies with metadata
-  app.get("/api/strategies", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.get("/api/strategies", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const strategies = strategyFactory.getAvailableStrategies();
       
@@ -31,7 +31,7 @@ export function registerStrategyRoutes(app: Express): void {
   });
 
   // Get specific strategy information and trading rules
-  app.get("/api/strategies/:strategyType", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.get("/api/strategies/:strategyType", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const strategyType = req.params.strategyType as StrategyType;
       
@@ -66,7 +66,7 @@ export function registerStrategyRoutes(app: Express): void {
   });
 
   // Calculate strategy position with real market data
-  app.post("/api/strategies/:strategyType/calculate", requireAuth, rateLimitRules.marketData, async (req: any, res) => {
+  app.post("/api/strategies/:strategyType/calculate", requireSupabaseAuth, rateLimitRules.marketData, async (req: any, res) => {
     const startTime = Date.now();
     
     try {
@@ -143,7 +143,7 @@ export function registerStrategyRoutes(app: Express): void {
   });
 
   // Get P&L curve data for charting
-  app.post("/api/strategies/:strategyType/pl-curve", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.post("/api/strategies/:strategyType/pl-curve", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const strategyType = req.params.strategyType as StrategyType;
       const { result, currentPrice, priceRange } = req.body;
@@ -187,7 +187,7 @@ export function registerStrategyRoutes(app: Express): void {
   });
 
   // Get recommended position sizing
-  app.post("/api/strategies/:strategyType/position-sizing", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.post("/api/strategies/:strategyType/position-sizing", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const strategyType = req.params.strategyType as StrategyType;
       const { portfolioValue } = req.body;
@@ -225,7 +225,7 @@ export function registerStrategyRoutes(app: Express): void {
   });
 
   // Validate strategy can be calculated with available market data
-  app.post("/api/strategies/:strategyType/validate", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.post("/api/strategies/:strategyType/validate", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const strategyType = req.params.strategyType as StrategyType;
       const { symbol, currentPrice, expirationDate } = req.body;
@@ -274,7 +274,7 @@ export function registerStrategyRoutes(app: Express): void {
   });
 
   // Compare multiple strategies for the same underlying
-  app.post("/api/strategies/compare", requireAuth, rateLimitRules.marketData, async (req: any, res) => {
+  app.post("/api/strategies/compare", requireSupabaseAuth, rateLimitRules.marketData, async (req: any, res) => {
     try {
       const { symbol, currentPrice, expirationDate, strategies } = req.body;
       

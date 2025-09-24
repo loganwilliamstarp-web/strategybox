@@ -12,6 +12,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useDataRefresh } from "@/hooks/useDataRefresh";
 import { useEffect } from "react";
+import { loginWithEmail, registerWithEmail } from "@/lib/supabaseAuth";
 import { 
   TrendingUp, 
   BarChart3, 
@@ -56,19 +57,8 @@ export default function AuthPage() {
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (credentials: { email: string; password: string }) => {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(credentials),
-        credentials: "include",
-      });
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Login failed");
-      }
-      return await response.json();
+      const data = await loginWithEmail(credentials.email, credentials.password);
+      return data.user;
     },
     onSuccess: async (user) => {
       // Set user data immediately to prevent 404 flash
@@ -120,19 +110,11 @@ export default function AuthPage() {
       firstName: string;
       lastName: string;
     }) => {
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-        credentials: "include",
+      const data = await registerWithEmail(userData.email, userData.password, {
+        first_name: userData.firstName,
+        last_name: userData.lastName,
       });
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Registration failed");
-      }
-      return await response.json();
+      return data.user;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(["/api/auth/user"], user);

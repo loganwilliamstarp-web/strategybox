@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth } from "../auth";
+import { requireSupabaseAuth } from "../supabaseAuth";
 import { storage } from "../storage";
 import { performanceOptimizer } from "../services/performanceOptimizer";
 import { rateLimitRules } from "../middleware/rateLimiter";
@@ -80,7 +80,7 @@ export function registerRefreshRoutes(app: Express): void {
   });
 
   // Enhanced refresh earnings endpoint - now refreshes BOTH prices and options/strikes (no rate limiting)
-  app.post("/api/tickers/refresh-earnings", requireAuth, async (req: any, res) => {
+  app.post("/api/tickers/refresh-earnings", requireSupabaseAuth, async (req: any, res) => {
     const startTime = Date.now();
     const userId = req.user.id; // Use the actual authenticated user
     
@@ -289,7 +289,7 @@ export function registerRefreshRoutes(app: Express): void {
   });
 
   // Force refresh specific symbol (for individual ticker refresh)
-  app.post("/api/tickers/:symbol/refresh", requireAuth, rateLimitRules.marketData, async (req: any, res) => {
+  app.post("/api/tickers/:symbol/refresh", requireSupabaseAuth, rateLimitRules.marketData, async (req: any, res) => {
     const startTime = Date.now();
     const userId = req.user.id;
     const symbol = req.params.symbol.toUpperCase();
@@ -348,7 +348,7 @@ export function registerRefreshRoutes(app: Express): void {
   });
 
   // Clear all caches (admin/debug function)
-  app.post("/api/refresh/clear-cache", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.post("/api/refresh/clear-cache", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const userId = req.user.id;
       console.log(`🧹 CACHE CLEAR requested by user ${userId}`);
@@ -380,7 +380,7 @@ export function registerRefreshRoutes(app: Express): void {
   });
 
   // Get cache statistics (for monitoring)
-  app.get("/api/refresh/cache-stats", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.get("/api/refresh/cache-stats", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const metrics = performanceOptimizer.getMetrics();
       

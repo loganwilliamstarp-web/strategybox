@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth } from "../auth";
+import { requireSupabaseAuth } from "../supabaseAuth";
 import { rateLimitRules } from "../middleware/rateLimiter";
 
 /**
@@ -8,7 +8,7 @@ import { rateLimitRules } from "../middleware/rateLimiter";
 export function registerDataRefreshRoutes(app: Express): void {
 
   // Force refresh all cached data on login
-  app.post("/api/refresh-all-data", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.post("/api/refresh-all-data", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       console.log(`🔄 Starting comprehensive data refresh for user: ${req.user?.email || req.user?.id}`);
       
@@ -112,7 +112,7 @@ export function registerDataRefreshRoutes(app: Express): void {
   });
 
   // Get refresh status (for monitoring)
-  app.get("/api/refresh-status", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.get("/api/refresh-status", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const { marketDataApiService } = await import('../marketDataApi');
       const { performanceOptimizer } = await import('../services/performanceOptimizer');

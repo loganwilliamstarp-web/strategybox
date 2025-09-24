@@ -1,8 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth } from "../auth";
-import { setupSimpleAuth } from "../simpleAuth";
-import { setupTokenAuth } from "../tokenAuth";
+import { setupSupabaseAuth } from "../supabaseAuth";
 import { storage } from "../storage";
 
 // Import all route modules
@@ -25,14 +23,8 @@ import { setupDebugRoutes } from "./debug";
  * Register all application routes
  */
 export function registerRoutes(app: Express): Server {
-  // Auth middleware
-  setupAuth(app);
-  
-  // Simple auth for development/testing
-  setupSimpleAuth(app);
-  
-  // Token auth for bypassing session issues
-  setupTokenAuth(app);
+  // Supabase-only authentication system
+  setupSupabaseAuth(app);
   
   // Pass storage to app locals for use in routes
   app.locals.storage = storage;

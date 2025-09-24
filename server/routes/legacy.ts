@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth } from "../auth";
+import { requireSupabaseAuth } from "../supabaseAuth";
 import { storage } from "../storage";
 import { LongStrangleCalculator } from "../positionCalculator";
 import { marketDataApiService } from "../marketDataApi";
@@ -215,7 +215,7 @@ export function registerLegacyRoutes(app: Express): void {
   });
 
   // DIRECT FIX: Update NVDA with exact market prices from user screenshot
-  app.post("/api/fix-nvda-direct", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.post("/api/fix-nvda-direct", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const userId = req.user.id;
       console.log("🎯 DIRECT NVDA FIX - Using exact market prices");
@@ -340,7 +340,7 @@ export function registerLegacyRoutes(app: Express): void {
   });
 
   // Get volatility surface data for a symbol
-  app.get("/api/volatility-surface/:symbol", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.get("/api/volatility-surface/:symbol", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const { symbol } = req.params;
       const userId = req.user.id;
@@ -365,7 +365,7 @@ export function registerLegacyRoutes(app: Express): void {
   });
 
   // Options Chain routes
-  app.get("/api/options/:symbol", requireAuth, rateLimitRules.general, async (req: any, res) => {
+  app.get("/api/options/:symbol", requireSupabaseAuth, rateLimitRules.general, async (req: any, res) => {
     try {
       const { symbol } = req.params;
       const optionsChain = await storage.getOptionsChain(symbol.toUpperCase());
@@ -381,7 +381,7 @@ export function registerLegacyRoutes(app: Express): void {
 
   // DISABLED: Refresh earnings data, prices, and options pricing (moved to refresh.ts)
   /*
-  app.post("/api/tickers/refresh-earnings", requireAuth, rateLimitRules.marketData, async (req: any, res) => {
+  app.post("/api/tickers/refresh-earnings", requireSupabaseAuth, rateLimitRules.marketData, async (req: any, res) => {
     try {
       const userId = req.user.id;
       console.log(`🔄 Refresh earnings called for user ${userId}`);

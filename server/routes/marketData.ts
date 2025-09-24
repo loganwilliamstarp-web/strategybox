@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth } from "../auth";
+import { requireSupabaseAuth } from "../supabaseAuth";
 import { storage } from "../storage";
 import { OptionsStrategyCalculator } from "../positionCalculator";
 import { StrategyType } from "@shared/schema";
@@ -149,7 +149,7 @@ export function registerMarketDataRoutes(app: Express): void {
   });
 
   // Market Data API routes for real options data
-  app.get("/api/market-data/options-chain/:symbol", requireAuth, rateLimitRules.marketData, async (req: any, res) => {
+  app.get("/api/market-data/options-chain/:symbol", requireSupabaseAuth, rateLimitRules.marketData, async (req: any, res) => {
     try {
       const { symbol } = req.params;
       const { multipleExpirations = 'true' } = req.query;
@@ -301,7 +301,7 @@ export function registerMarketDataRoutes(app: Express): void {
   });
 
   // Get optimal strangle strikes with real market data
-  app.get("/api/market-data/optimal-strangle/:symbol", requireAuth, rateLimitRules.marketData, async (req: any, res) => {
+  app.get("/api/market-data/optimal-strangle/:symbol", requireSupabaseAuth, rateLimitRules.marketData, async (req: any, res) => {
     try {
       const symbol = req.params.symbol.toUpperCase();
       // Get current stock price

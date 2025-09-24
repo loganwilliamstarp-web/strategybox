@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { requireAuth } from "../auth";
+import { requireSupabaseAuth } from "../supabaseAuth";
 import { storage } from "../storage";
 import { StrategyType } from "@shared/schema";
 import { OptionsStrategyCalculator, LongStrangleCalculator } from "../positionCalculator";
@@ -12,7 +12,7 @@ import { rateLimitRules } from "../middleware/rateLimiter";
 export function registerPositionRoutes(app: Express): void {
 
   // Update position strikes
-  app.patch("/api/positions/:id", requireAuth, rateLimitRules.positions, async (req: any, res) => {
+  app.patch("/api/positions/:id", requireSupabaseAuth, rateLimitRules.positions, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { id } = req.params;
@@ -128,7 +128,7 @@ export function registerPositionRoutes(app: Express): void {
   });
 
   // Set custom strikes for a position
-  app.post("/api/positions/:id/custom-strikes", requireAuth, rateLimitRules.positions, async (req: any, res) => {
+  app.post("/api/positions/:id/custom-strikes", requireSupabaseAuth, rateLimitRules.positions, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { id } = req.params;
@@ -212,7 +212,7 @@ export function registerPositionRoutes(app: Express): void {
   });
 
   // Clear custom strikes for a position (revert to automatic calculation)
-  app.delete("/api/positions/:id/custom-strikes", requireAuth, rateLimitRules.positions, async (req: any, res) => {
+  app.delete("/api/positions/:id/custom-strikes", requireSupabaseAuth, rateLimitRules.positions, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { id } = req.params;
@@ -276,7 +276,7 @@ export function registerPositionRoutes(app: Express): void {
   });
 
   // Calculate position with real market premiums
-  app.post("/api/position/calculate-with-real-premiums", requireAuth, rateLimitRules.marketData, async (req: any, res) => {
+  app.post("/api/position/calculate-with-real-premiums", requireSupabaseAuth, rateLimitRules.marketData, async (req: any, res) => {
     try {
       const { symbol, currentPrice, putStrike, callStrike } = req.body;
       
