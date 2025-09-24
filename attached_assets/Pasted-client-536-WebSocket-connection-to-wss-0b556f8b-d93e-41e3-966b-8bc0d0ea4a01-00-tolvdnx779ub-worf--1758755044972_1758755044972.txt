@@ -1,0 +1,104 @@
+client:536 WebSocket connection to 'wss://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/?token=veqxAUE5zGTn' failed: 
+setupWebSocket @ client:536
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=veqxAUE5zGTn' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+chunk-276SZO74.js?v=a3296f3f:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+App.tsx:18 🔍 Router state: Object
+supabaseAuth.ts:42 ✅ Supabase auth state changed: user logged in ljohns1119@gmail.com
+supabaseAuth.ts:23 🔄 Restored Supabase session on startup: ljohns1119@gmail.com
+useAuth.ts:17 🔍 Initial auth check: Object
+useAuth.ts:25 🔄 Found existing session, pre-populating auth cache
+App.tsx:18 🔍 Router state: Object
+App.tsx:18 🔍 Router state: Object
+options-chain.tsx:23 🔄 OptionsChainComponent rendered - dashboardExpiration: , symbol: , isOpen: false
+supabaseAuth.ts:145 🔍 API request to: /api/available-expirations
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/available-expirations
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+supabaseAuth.ts:145 🔍 API request to: /api/alerts
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/alerts
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+supabaseAuth.ts:145 🔍 API request to: /api/recommendations
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/recommendations
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+useRealtimeDataV3.ts:59 🔌 WebSocket: Connecting to wss://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/websocket-v4-cache-bypass?token=be5aeaeb-f665-44f6-9ef8-7a18df7f1ad5
+dashboard.tsx:179 📅 Dashboard default expiration: Today is Wed Sep 24 2025 (day 3), next Friday: 2025-09-26 (Fri Sep 26 2025)
+dashboard.tsx:187 📅 Dashboard selectedExpiration changed to: 
+supabaseAuth.ts:145 🔍 API request to: /api/tickers
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/tickers
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+dashboard.tsx:360 🔄 Dashboard: Refetch function changed
+supabaseAuth.ts:145 🔍 API request to: /api/portfolio/summary
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/portfolio/summary
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+supabaseAuth.ts:145 🔍 API request to: /api/stock-api/status
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/stock-api/status
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+supabaseAuth.ts:145 🔍 API request to: /api/schwab/status
+supabaseAuth.ts:146 🔍 Request method: GET
+supabaseAuth.ts:147 🔍 Full URL: https://0b556f8b-d93e-41e3-966b-8bc0d0ea4a01-00-tolvdnx779ub.worf.replit.dev/api/schwab/status
+supabaseAuth.ts:148 🔑 Token available: true
+supabaseAuth.ts:157 ✅ Authorization header set
+useAuth.ts:17 🔍 Initial auth check: Object
+useAuth.ts:25 🔄 Found existing session, pre-populating auth cache
+useAuth.ts:17 🔍 Initial auth check: Object
+useAuth.ts:25 🔄 Found existing session, pre-populating auth cache
+supabaseAuth.ts:42 ✅ Supabase auth state changed: user logged in ljohns1119@gmail.com
+options-chain.tsx:23 🔄 OptionsChainComponent rendered - dashboardExpiration: 2025-09-26, symbol: , isOpen: false
+dashboard.tsx:187 📅 Dashboard selectedExpiration changed to: 2025-09-26
+useRealtimeDataV3.ts:64 ✅ WebSocket: Connected successfully
+options-chain.tsx:23 🔄 OptionsChainComponent rendered - dashboardExpiration: 2025-09-26, symbol: , isOpen: false
+dashboard.tsx:312 ⚠️ Skipping automatic refresh to avoid rate limits. Use the Refresh button if needed.
+/api/available-expirations:1  Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: Object
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+/api/alerts:1  Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: Object
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+useRealtimeDataV3.ts:80 📨 WebSocket: Received message authenticated
+useRealtimeDataV3.ts:84 🔐 WebSocket: Authenticated successfully
+/api/schwab/status:1  Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: Object
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+supabaseAuth.ts:167 🔍 Response status: 200
+supabaseAuth.ts:168 🔍 Response headers: Object
+options-chain.tsx:23 🔄 OptionsChainComponent rendered - dashboardExpiration: 2025-09-26, symbol: , isOpen: false
+useRealtimeDataV3.ts:80 📨 WebSocket: Received message initial_data
+useRealtimeDataV3.ts:87 📊 WebSocket: Received initial data
+/api/tickers:1  Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: Object
+supabaseAuth.ts:173 🔍 Ticker API Response: {"error":"Too Many Requests","message":"Rate limit exceeded. Try again in 60 seconds.","retryAfter":60}
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+options-chain.tsx:23 🔄 OptionsChainComponent rendered - dashboardExpiration: 2025-09-26, symbol: , isOpen: false
+/api/stock-api/status:1  Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: Object
+/api/recommendations:1  Failed to load resource: the server responded with a status of 429 (Too Many Requests)
+supabaseAuth.ts:167 🔍 Response status: 429
+supabaseAuth.ts:168 🔍 Response headers: Object
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+queryClient.ts:61 ⏳ Rate limit hit - stopping retries to respect server limits
+retry @ queryClient.ts:61
+useRealtimeDataV3.ts:31 🔄 WebSocket: Debounced cache invalidation executing...
