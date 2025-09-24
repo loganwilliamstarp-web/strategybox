@@ -31,8 +31,10 @@ export function useRealtimeDataV3() {
       // Get the current host and port from the browser
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.hostname;
-      const port = window.location.port || '5001'; // Default to 5001 if no port
-      const wsUrl = `${protocol}//${host}:${port}/websocket-v4-cache-bypass?token=${user.id}`;
+      const port = window.location.port; // Use same port as current page
+      const wsUrl = port 
+        ? `${protocol}//${host}:${port}/websocket-v4-cache-bypass?token=${user.id}`
+        : `${protocol}//${host}/websocket-v4-cache-bypass?token=${user.id}`;
       
       console.log('🔌 WebSocket: Connecting to', wsUrl);
       
