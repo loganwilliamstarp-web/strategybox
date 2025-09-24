@@ -627,8 +627,24 @@ export class DatabaseStorage implements IStorage {
     for (const [expirationDate, expirationChains] of chainsByExpiration) {
       console.log(`📅 Processing ${expirationChains.length} chains for ${symbol} expiring ${expirationDate}`);
       
-      // Use database transaction for atomicity
+      // Generate deterministic lock ID for this symbol+expiration combination
+      // Use simple hash to create consistent integer for advisory lock
+      const lockString = `${symbol}_${expirationDate}`;
+      const lockId = this.hashStringToInt(lockString);
+      
+      console.log(`🔒 Acquiring advisory lock for ${symbol}:${expirationDate} (ID: ${lockId})`);
+      
+      // Use database transaction with advisory lock for concurrency control
       await db.transaction(async (tx) => {
+        // Acquire advisory lock for this symbol+expiration - prevents concurrent updates
+        try {
+          const lockResult = await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockId})`);
+          console.log(`🔒 Advisory lock acquired for ${symbol}:${expirationDate}`);
+        } catch (lockError) {
+          console.error(`❌ Failed to acquire advisory lock for ${symbol}:${expirationDate}:`, lockError);
+          throw lockError;
+        }
+        
         // Process in batches within the transaction
         for (let i = 0; i < expirationChains.length; i += batchSize) {
           const batch = expirationChains.slice(i, i + batchSize);
@@ -671,10 +687,25 @@ export class DatabaseStorage implements IStorage {
         }
         
         console.log(`✅ Transaction completed for ${symbol} expiration ${expirationDate}: ${expirationChains.length} records`);
+        // Advisory lock is automatically released when transaction ends
       });
+      
+      console.log(`🔓 Advisory lock released for ${symbol}:${expirationDate}`);
     }
     
     console.log(`🎯 ROBUST UPSERT COMPLETE: Successfully processed ${totalProcessed}/${chains.length} chains for ${symbol}`);
+  }
+
+  // Helper method to generate deterministic integer hash for advisory locks
+  private hashStringToInt(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    // Ensure positive integer for PostgreSQL advisory lock
+    return Math.abs(hash);
   }
 
   async saveOptionsChain(symbol: string, chainData: OptionsChainData): Promise<void> {
