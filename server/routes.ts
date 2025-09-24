@@ -97,10 +97,13 @@ function getNextOptionsExpiration(): { date: string, days: number, type: 'weekly
     if (daysToFriday === 0) daysToFriday = 7; // If today is Friday, next Friday is 7 days away
     
     targetDate.setDate(now.getDate() + daysToFriday + (weekOffset * 7)); // Next Friday + weeks
-    targetDate.setHours(16, 0, 0, 0); // Set to 4 PM EST (market close time)
+    // Don't set hours - keep it at midnight to ensure we stay on the correct Friday date
+    targetDate.setHours(0, 0, 0, 0); // Set to midnight to avoid timezone issues
     
-    // Skip if it's today or in the past
-    if (targetDate <= now) continue;
+    // Skip if it's today or in the past (compare dates only, not times)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (targetDate <= today) continue;
     
     // Check if this Friday is the third Friday of the month (monthly expiration)
     const firstDayOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);

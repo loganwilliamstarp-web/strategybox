@@ -91,8 +91,10 @@ export class DatabaseStorage implements IStorage {
     // Initialize real user data in Supabase
     this.initializeRealUserData();
     
-    // Run expected move migration for existing positions
-    this.runExpectedMoveMigration();
+    // Run expected move migration for existing positions (async)
+    this.runExpectedMoveMigration().catch(error => {
+      console.error('❌ Expected move migration failed:', error);
+    });
     
     console.log('🔧 DatabaseStorage initialized - using real Supabase database');
   }

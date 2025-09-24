@@ -71,6 +71,7 @@ export default function AuthPage() {
       return await response.json();
     },
     onSuccess: async (user) => {
+      // Set user data immediately to prevent 404 flash
       queryClient.setQueryData(["/api/auth/user"], user);
       
       toast({
@@ -84,14 +85,18 @@ export default function AuthPage() {
         console.log("🔄 Triggering data refresh after login...");
         refreshAllData();
         
-        // Force authentication state refresh and then navigate
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        // Navigate immediately since auth state is already set
+        console.log("🔄 Navigating to dashboard after login...");
+        setLocation("/");
         
-        // Small delay to let the auth state update, then navigate
-        setTimeout(() => {
-          console.log("🔄 Navigating to dashboard after login...");
-          setLocation("/");
-        }, 1000);
+        // Continue data refresh in background
+        setTimeout(async () => {
+          try {
+            await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+          } catch (error) {
+            console.error("Background auth refresh failed:", error);
+          }
+        }, 500);
       } catch (error) {
         console.error("Failed to trigger data refresh:", error);
         // Still navigate even if refresh fails
