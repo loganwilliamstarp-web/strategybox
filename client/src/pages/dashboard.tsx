@@ -35,7 +35,6 @@ import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
-// import { useRealtimeDataV3 } from "@/hooks/useRealtimeDataV3"; // TEMPORARILY DISABLED
 import { useCapacitor } from "@/hooks/useCapacitor";
 import { getOptimalRefetchInterval, getMarketSession, getCurrentEasternTime } from "@/utils/marketHours";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -90,7 +89,7 @@ export default function Dashboard() {
   const updateAllTickersStrategyMutation = useMutation({
     mutationFn: async (data: { strategyType: StrategyType; expirationDate: string }) => {
       const results = [];
-      const promises = tickers.map(async (ticker) => {
+      const promises = tickers.map(async (ticker: TickerWithPosition) => {
         try {
           const response = await apiRequest(`/api/positions/${ticker.position.id}`, {
             method: "PATCH",
@@ -107,8 +106,8 @@ export default function Dashboard() {
       });
       
       const responses = await Promise.all(promises);
-      const successful = responses.filter(r => r.success);
-      const failed = responses.filter(r => !r.success);
+      const successful = responses.filter((r: any) => r.success);
+      const failed = responses.filter((r: any) => !r.success);
       
       return { successful, failed, responses };
     },
@@ -127,7 +126,7 @@ export default function Dashboard() {
           description: `All ${successful.length} positions updated to ${selectedStrategy.replace('_', ' ')} strategy`,
         });
       } else if (successful.length > 0 && failed.length > 0) {
-        const failedSymbols = failed.map(f => f.symbol).join(', ');
+        const failedSymbols = failed.map((f: any) => f.symbol).join(', ');
         toast({
           title: "Partial Update",
           description: isToday 
@@ -344,17 +343,10 @@ export default function Dashboard() {
     queryKey: ["/api/tickers"], // Keep stable query key
     refetchInterval: optimalIntervals.refetchInterval, // Market-aware intervals
     staleTime: 30 * 1000, // Cache for 30 seconds when WebSocket is active
-    cacheTime: 60 * 1000, // Cache for 1 minute
+    gcTime: 60 * 1000, // Cache for 1 minute
     refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchOnMount: true, // Always refetch on mount
     refetchIntervalInBackground: false, // Let WebSocket handle background updates
-    onSuccess: (data) => {
-      console.log('🔄 Query SUCCESS - Received ticker data:', data?.length, 'tickers');
-      console.log('📊 First ticker data:', data?.[0]);
-    },
-    onError: (error) => {
-      console.error('❌ Query ERROR:', error);
-    },
   });
 
   // Only force refetch if WebSocket is disconnected
@@ -370,7 +362,7 @@ export default function Dashboard() {
 
   // Filter tickers based on selected expiration date
   const tickers = selectedDate 
-    ? allTickers.filter(ticker => {
+    ? allTickers.filter((ticker: TickerWithPosition) => {
         const tickerExpirationDate = new Date(ticker.position.expirationDate);
         const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
         const tickerDateOnly = new Date(tickerExpirationDate.getFullYear(), tickerExpirationDate.getMonth(), tickerExpirationDate.getDate());
@@ -384,11 +376,11 @@ export default function Dashboard() {
 
   // Calculate filtered portfolio summary when date is selected
   const filteredPortfolio = selectedDate && tickers.length > 0 ? {
-    totalPremiumPaid: tickers.reduce((sum, ticker) => sum + ticker.position.longPutPremium + ticker.position.longCallPremium, 0),
+    totalPremiumPaid: tickers.reduce((sum: number, ticker: TickerWithPosition) => sum + ticker.position.longPutPremium + ticker.position.longCallPremium, 0),
     activePositions: tickers.length,
-    avgDaysToExpiry: tickers.reduce((sum, ticker) => sum + ticker.position.daysToExpiry, 0) / tickers.length,
-    totalMaxLoss: tickers.reduce((sum, ticker) => sum + ticker.position.maxLoss, 0),
-    avgImpliedVolatility: tickers.reduce((sum, ticker) => sum + ticker.position.impliedVolatility, 0) / tickers.length,
+    avgDaysToExpiry: tickers.reduce((sum: number, ticker: TickerWithPosition) => sum + ticker.position.daysToExpiry, 0) / tickers.length,
+    totalMaxLoss: tickers.reduce((sum: number, ticker: TickerWithPosition) => sum + ticker.position.maxLoss, 0),
+    avgImpliedVolatility: tickers.reduce((sum: number, ticker: TickerWithPosition) => sum + ticker.position.impliedVolatility, 0) / tickers.length,
   } : portfolio;
 
   // Check API status
@@ -709,7 +701,7 @@ export default function Dashboard() {
                     {selectedDate ? "No tickers for selected date" : "No active tickers"}
                   </div>
                 ) : (
-                  (showAllTickers ? tickers : tickers.slice(0, 5)).map((ticker, index) => (
+                  (showAllTickers ? tickers : tickers.slice(0, 5)).map((ticker: TickerWithPosition, index: number) => (
                     <Badge 
                       key={ticker.id} 
                       className="bg-primary text-white"
@@ -806,7 +798,7 @@ export default function Dashboard() {
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-              {tickers.map((ticker) => (
+              {tickers.map((ticker: TickerWithPosition) => (
                 <TickerCard 
                   key={ticker.id} 
                   ticker={ticker} 
