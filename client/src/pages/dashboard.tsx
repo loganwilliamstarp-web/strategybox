@@ -152,7 +152,7 @@ export default function Dashboard() {
     },
   });
   
-  // Set default expiration to next Friday (matching backend logic)
+  // Set default expiration to next Friday (matching backend logic) - FIXED: Remove dependency to prevent infinite loop
   useEffect(() => {
     if (selectedExpiration) return;
 
@@ -180,7 +180,7 @@ export default function Dashboard() {
       `📅 Dashboard default expiration: Today is ${today.toDateString()} (day ${day}), next Friday: ${formatted} (${nextFriday.toDateString()})`
     );
     setSelectedExpiration(formatted);
-  }, [selectedExpiration]);
+  }, []); // FIXED: Empty dependency array - only run once on mount
 
   // Debug selectedExpiration changes
   useEffect(() => {
