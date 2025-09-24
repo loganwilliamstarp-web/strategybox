@@ -91,23 +91,38 @@ export class DatabaseStorage implements IStorage {
     // Initialize real user data in Supabase
     this.initializeRealUserData();
     
-    // Run expected move migration for existing positions (async)
-    this.runExpectedMoveMigration().catch(error => {
-      console.error('❌ Expected move migration failed:', error);
-    });
+          // Run expected move migration for existing positions (async)
+          this.runExpectedMoveMigration().catch(error => {
+            console.error('❌ Expected move migration failed:', error);
+          });
+
+          // Run expiration date migration for existing positions (async)
+          this.runExpirationDateMigration().catch(error => {
+            console.error('❌ Expiration date migration failed:', error);
+          });
     
     console.log('🔧 DatabaseStorage initialized - using real Supabase database');
   }
 
-  private async runExpectedMoveMigration() {
-    try {
-      // Import and run the migration
-      const { migrateExpectedMoveData } = await import('./utils/migrateExpectedMove');
-      await migrateExpectedMoveData();
-    } catch (error) {
-      console.error('❌ Expected move migration failed:', error);
-    }
-  }
+        private async runExpectedMoveMigration() {
+          try {
+            // Import and run the migration
+            const { migrateExpectedMoveData } = await import('./utils/migrateExpectedMove');
+            await migrateExpectedMoveData();
+          } catch (error) {
+            console.error('❌ Expected move migration failed:', error);
+          }
+        }
+
+        private async runExpirationDateMigration() {
+          try {
+            // Import and run the expiration date migration
+            const { migrateExpirationDates } = await import('./utils/migrateExpirationDates');
+            await migrateExpirationDates();
+          } catch (error) {
+            console.error('❌ Expiration date migration failed:', error);
+          }
+        }
 
   // User operations for email/password auth
   async getUser(id: string): Promise<User | undefined> {
