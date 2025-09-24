@@ -36,15 +36,21 @@ export function getCurrentUser() {
 
 // Login with email and password
 export async function loginWithEmail(email: string, password: string) {
+  console.log('🔍 Attempting Supabase login for:', email);
+  
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) {
+    console.error('❌ Supabase login error:', error);
     throw new Error(error.message);
   }
 
+  console.log('✅ Supabase login successful:', data.user?.email);
+  console.log('🔑 Access token available:', !!data.session?.access_token);
+  
   return data;
 }
 
@@ -86,6 +92,9 @@ export async function getCurrentSession() {
 export async function apiRequestWithAuth(url: string, options: RequestInit = {}): Promise<any> {
   const token = getAccessToken();
   
+  console.log('🔍 API request to:', url);
+  console.log('🔑 Token available:', !!token);
+  
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...options.headers,
@@ -93,6 +102,9 @@ export async function apiRequestWithAuth(url: string, options: RequestInit = {})
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+    console.log('✅ Authorization header set');
+  } else {
+    console.log('❌ No token available for API request');
   }
 
   const response = await fetch(url, {

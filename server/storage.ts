@@ -192,34 +192,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   private async initializeTestUser() {
-    // Create test user for development with hashed password
-    const { hashPassword } = await import('./auth');
-    const hashedPassword = await hashPassword('Option#123');
-    
-    const testUserData: InsertUser = {
-      id: "test-user-id",
-      email: "test@options.com",
-      password: hashedPassword,
-      firstName: "Test",
-      lastName: "User",
-      profileImageUrl: null,
-    };
-    
-    // Check if user already exists to avoid duplicates
-    const existingUser = await this.getUser("test-user-id");
-    if (!existingUser) {
-      await db.insert(users).values(testUserData).onConflictDoNothing();
-      console.log('✅ Created test user: test@options.com');
-    } else {
-      console.log('✅ Test user test@options.com already exists');
-    }
-    
-    // Always check if test user has tickers, if not create them
-    const existingTickers = await this.getActiveTickersForUser("test-user-id");
-    if (existingTickers.length === 0) {
-      console.log('📊 Creating sample data for test user...');
-      await this.createTestUserData();
-    }
+    // Note: Test user is already created in mock database
+    // This method is kept for Supabase database users if needed
+    console.log('✅ Test user already exists in mock database: test@options.com / password123');
   }
 
   private async createTestUserData() {
