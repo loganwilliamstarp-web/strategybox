@@ -103,6 +103,33 @@ export const optionsChains = pgTable("options_chains", {
   uniqueOptionKey: uniqueIndex("options_composite_unique_idx").on(table.symbol, table.expirationDate, table.strike, table.optionType),
 }));
 
+// Historical options chain data for expired contracts
+export const historicalOptionsChains = pgTable("historical_options_chains", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  originalId: varchar("original_id").notNull(), // Reference to original optionsChains.id
+  symbol: text("symbol").notNull(),
+  expirationDate: text("expiration_date").notNull(),
+  strike: real("strike").notNull(),
+  optionType: text("option_type").notNull(), // 'call' or 'put'
+  bid: real("bid").notNull(),
+  ask: real("ask").notNull(),
+  lastPrice: real("last_price").notNull(),
+  volume: integer("volume").notNull(),
+  openInterest: integer("open_interest").notNull(),
+  impliedVolatility: real("implied_volatility").notNull(),
+  delta: real("delta").notNull(),
+  gamma: real("gamma").notNull(),
+  theta: real("theta").notNull(),
+  vega: real("vega").notNull(),
+  updatedAt: timestamp("updated_at").notNull(), // Last update before archival
+  archivedAt: timestamp("archived_at").defaultNow(), // When moved to historical table
+}, (table) => ({
+  // Index for efficient querying by symbol and expiration date
+  symbolExpirationIdx: index("historical_symbol_expiration_idx").on(table.symbol, table.expirationDate),
+  // Index for efficient querying by archive date
+  archivedAtIdx: index("historical_archived_at_idx").on(table.archivedAt),
+}));
+
 // Price alerts for notifications
 export const priceAlerts = pgTable("price_alerts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -151,6 +178,11 @@ export const insertOptionsChainSchema = createInsertSchema(optionsChains).omit({
   updatedAt: true,
 });
 
+export const insertHistoricalOptionsChainSchema = createInsertSchema(historicalOptionsChains).omit({
+  id: true,
+  archivedAt: true,
+});
+
 export const insertPriceAlertSchema = createInsertSchema(priceAlerts).omit({
   id: true,
   createdAt: true,
@@ -194,6 +226,8 @@ export type AddTickerRequest = z.infer<typeof addTickerSchema>;
 
 export type InsertOptionsChain = z.infer<typeof insertOptionsChainSchema>;
 export type OptionsChain = typeof optionsChains.$inferSelect;
+export type InsertHistoricalOptionsChain = z.infer<typeof insertHistoricalOptionsChainSchema>;
+export type HistoricalOptionsChain = typeof historicalOptionsChains.$inferSelect;
 export type InsertPriceAlert = z.infer<typeof insertPriceAlertSchema>;
 export type PriceAlert = typeof priceAlerts.$inferSelect;
 export type InsertExitRecommendation = z.infer<typeof insertExitRecommendationSchema>;
