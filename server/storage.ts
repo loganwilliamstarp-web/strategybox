@@ -4,6 +4,7 @@ import {
   users,
   longStranglePositions,
   optionsChains,
+  historicalOptionsChains,
   priceAlerts,
   exitRecommendations,
   sessions,
@@ -19,6 +20,8 @@ import {
   type InsertUser,
   type OptionsChain,
   type InsertOptionsChain,
+  type HistoricalOptionsChain,
+  type InsertHistoricalOptionsChain,
   type OptionsChainData,
   type PriceAlert,
   type InsertPriceAlert,
@@ -786,13 +789,13 @@ export class DatabaseStorage implements IStorage {
     return Math.abs(hash);
   }
 
-  // Cleanup stale options data to maintain database performance
-  async cleanupStaleOptionsData(): Promise<void> {
-    console.log(`🧹 CLEANUP: Starting stale options data cleanup...`);
+  // Archive expired options and cleanup stale data to maintain database performance
+  async archiveExpiredOptionsAndCleanup(): Promise<void> {
+    console.log(`📦 ARCHIVE & CLEANUP: Starting expired options archival and stale data cleanup...`);
     
     try {
-      // Define cleanup thresholds
-      const expiredThresholdDays = 7; // Remove options expired more than 7 days ago
+      // Define archival and cleanup thresholds
+      const expiredThresholdDays = 7; // Archive options expired more than 7 days ago
       const staleDataThresholdDays = 30; // Remove very old price updates (30+ days)
       
       const expiredCutoff = new Date();
@@ -811,12 +814,50 @@ export class DatabaseStorage implements IStorage {
         await tx.execute(sql`SELECT pg_advisory_xact_lock(${cleanupLockId})`);
         console.log(`🔒 Global cleanup lock acquired`);
         
-        // 1. Remove options contracts that expired long ago
-        const expiredDeleteResult = await tx
-          .delete(optionsChains)
+        // 1. Archive expired options contracts to historical table
+        console.log(`📦 ARCHIVE: Moving expired options contracts to historical table...`);
+        
+        // First, get expired options that need to be archived
+        const expiredOptions = await tx
+          .select()
+          .from(optionsChains)
           .where(sql`expiration_date < ${expiredCutoff.toISOString().split('T')[0]}`);
         
-        console.log(`🗑️ Removed expired options contracts: ${expiredDeleteResult.rowCount} records`);
+        if (expiredOptions.length > 0) {
+          console.log(`📦 Found ${expiredOptions.length} expired contracts to archive`);
+          
+          // Move expired data to historical table
+          const historicalData: InsertHistoricalOptionsChain[] = expiredOptions.map(option => ({
+            originalId: option.id,
+            symbol: option.symbol,
+            expirationDate: option.expirationDate,
+            strike: option.strike,
+            optionType: option.optionType,
+            bid: option.bid,
+            ask: option.ask,
+            lastPrice: option.lastPrice,
+            volume: option.volume,
+            openInterest: option.openInterest,
+            impliedVolatility: option.impliedVolatility,
+            delta: option.delta,
+            gamma: option.gamma,
+            theta: option.theta,
+            vega: option.vega,
+            updatedAt: option.updatedAt || new Date(),
+          }));
+          
+          await tx.insert(historicalOptionsChains).values(historicalData);
+          console.log(`✅ Archived ${historicalData.length} expired contracts to historical table`);
+          
+          // Now delete the original expired options
+          const expiredDeleteResult = await tx
+            .delete(optionsChains)
+            .where(sql`expiration_date < ${expiredCutoff.toISOString().split('T')[0]}`);
+          
+          console.log(`🗑️ Removed ${expiredDeleteResult.rowCount} expired options from main table after archiving`);
+        } else {
+          console.log(`ℹ️ No expired contracts found to archive`);
+        }
         
         // 2. Remove very old price data (keep recent data for historical reference)
         const staleDeleteResult = await tx
@@ -842,7 +883,7 @@ export class DatabaseStorage implements IStorage {
         console.log(`📊 Cleanup complete: ${remainingCount[0].count} options records remain across ${activeSymbols.length} symbols`);
       });
       
-      console.log(`✅ CLEANUP COMPLETE: Stale data cleanup finished successfully`);
+      console.log(`✅ ARCHIVE & CLEANUP COMPLETE: Expired options archived and stale data cleanup finished successfully`);
       
     } catch (cleanupError) {
       console.error(`❌ CLEANUP FAILED: Error during stale data cleanup:`, cleanupError);
@@ -850,35 +891,62 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Automatic cleanup scheduler - call this periodically
+  // Daily stale data cleanup scheduler
   async scheduleStaleDataCleanup(): Promise<void> {
-    console.log(`⏰ SCHEDULER: Checking if cleanup is needed...`);
+    console.log(`⏰ DAILY SCHEDULER: Checking if cleanup is needed...`);
     
     try {
-      // Check if cleanup is needed (run once per day max)
-      const lastCleanupKey = 'last_cleanup_timestamp';
+      // Check if daily cleanup is needed (run once per day max)
       const now = Date.now();
       const oneDayMs = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
       
       // For simplicity, use a simple in-memory check (in production, store this in DB)
       if (!this.lastCleanupTime || (now - this.lastCleanupTime) >= oneDayMs) {
-        console.log(`⏰ Running scheduled cleanup - last cleanup was ${this.lastCleanupTime ? new Date(this.lastCleanupTime).toISOString() : 'never'}`);
+        console.log(`⏰ Running scheduled daily cleanup - last cleanup was ${this.lastCleanupTime ? new Date(this.lastCleanupTime).toISOString() : 'never'}`);
         
-        await this.cleanupStaleOptionsData();
+        await this.archiveExpiredOptionsAndCleanup();
         this.lastCleanupTime = now;
         
-        console.log(`⏰ Scheduled cleanup completed, next cleanup after ${new Date(now + oneDayMs).toISOString()}`);
+        console.log(`⏰ Scheduled daily cleanup completed, next cleanup after ${new Date(now + oneDayMs).toISOString()}`);
       } else {
         const nextCleanup = new Date(this.lastCleanupTime + oneDayMs);
-        console.log(`⏰ Cleanup not needed yet, next cleanup scheduled for ${nextCleanup.toISOString()}`);
+        console.log(`⏰ Daily cleanup not needed yet, next cleanup scheduled for ${nextCleanup.toISOString()}`);
       }
     } catch (schedulerError) {
-      console.error(`❌ SCHEDULER ERROR: Failed to run scheduled cleanup:`, schedulerError);
+      console.error(`❌ DAILY SCHEDULER ERROR: Failed to run scheduled cleanup:`, schedulerError);
       // Don't throw - cleanup failures shouldn't break normal operations
     }
   }
 
+  // Weekly archival scheduler - specifically for moving expired options to historical table
+  async scheduleWeeklyArchival(): Promise<void> {
+    console.log(`📅 WEEKLY SCHEDULER: Checking if weekly archival is needed...`);
+    
+    try {
+      // Check if weekly archival is needed (run once per week)
+      const now = Date.now();
+      const oneWeekMs = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+      
+      // For simplicity, use a simple in-memory check (in production, store this in DB)
+      if (!this.lastWeeklyArchivalTime || (now - this.lastWeeklyArchivalTime) >= oneWeekMs) {
+        console.log(`📅 Running scheduled weekly archival - last archival was ${this.lastWeeklyArchivalTime ? new Date(this.lastWeeklyArchivalTime).toISOString() : 'never'}`);
+        
+        await this.archiveExpiredOptionsAndCleanup();
+        this.lastWeeklyArchivalTime = now;
+        
+        console.log(`📅 Scheduled weekly archival completed, next archival after ${new Date(now + oneWeekMs).toISOString()}`);
+      } else {
+        const nextArchival = new Date(this.lastWeeklyArchivalTime + oneWeekMs);
+        console.log(`📅 Weekly archival not needed yet, next archival scheduled for ${nextArchival.toISOString()}`);
+      }
+    } catch (schedulerError) {
+      console.error(`❌ WEEKLY SCHEDULER ERROR: Failed to run scheduled archival:`, schedulerError);
+      // Don't throw - archival failures shouldn't break normal operations
+    }
+  }
+
   private lastCleanupTime: number | null = null;
+  private lastWeeklyArchivalTime: number | null = null;
 
   async saveOptionsChain(symbol: string, chainData: OptionsChainData): Promise<void> {
     try {
