@@ -381,51 +381,6 @@ export function registerTickerRoutes(app: Express): void {
           return;
         } catch (apiError) {
           console.error(`Live API failed for ${symbol}:`, apiError);
-          
-          // Check if this is a rate limit error - allow ticker creation with basic position
-          const errorMessage = apiError instanceof Error ? apiError.message : String(apiError);
-          if (errorMessage.includes('Rate limit') || errorMessage.includes('429')) {
-            console.log(`⚠️ Rate limit hit for ${symbol} - creating ticker with basic position estimates`);
-            
-            try {
-              // Create ticker with basic data only
-              const ticker = await storage.createTicker(tickerData);
-              console.log(`✅ Ticker created successfully (basic mode):`, ticker);
-              
-              // Create basic position with estimated values
-              const nextExpiration = getNextOptionsExpiration();
-              const atmStrike = Math.round(quote.currentPrice / 5) * 5; // Round to nearest $5
-              
-              const basicPosition = {
-                tickerId: ticker.id,
-                strategyType: strategyType as StrategyType,
-                longPutStrike: atmStrike - 5,   // ATM - $5
-                longCallStrike: atmStrike + 5,  // ATM + $5
-                longPutPremium: 1.0,   // Conservative estimates
-                longCallPremium: 1.0,
-                longExpiration: expirationDate || nextExpiration.date,
-                lowerBreakeven: atmStrike - 6,
-                upperBreakeven: atmStrike + 6,
-                maxLoss: 200, // Conservative estimate
-                maxProfit: null,
-                atmValue: atmStrike,
-                impliedVolatility: 0.25 // 25% default IV
-              };
-              
-              const position = await storage.createPosition(basicPosition);
-              console.log(`✅ Basic position created successfully:`, position);
-              
-              const result = { ...ticker, position };
-              console.log(`🎯 Returning ticker with basic position (rate limited):`, result);
-              res.json(result);
-              return;
-              
-            } catch (fallbackError) {
-              console.error(`❌ Fallback creation also failed for ${symbol}:`, fallbackError);
-            }
-          }
-          
-          // For non-rate-limit errors, return 503
           res.status(503).json({ 
             message: "Market data temporarily unavailable. Please check your API configuration and try again.",
             error: "live_data_required" 
