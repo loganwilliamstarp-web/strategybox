@@ -55,9 +55,47 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
   // Fetch individual IV values for the specific strikes
   const [individualIV, setIndividualIV] = useState<{ callIV: number; putIV: number } | null>(null);
   
-  // Fetch individual IV values when component mounts or ticker changes
+  // Real-time Greeks data
+  const [liveGreeks, setLiveGreeks] = useState<{
+    call: { delta: number; theta: number; gamma: number; vega: number; iv: number };
+    put: { delta: number; theta: number; gamma: number; vega: number; iv: number };
+  } | null>(null);
+  
+  // Current P&L calculations
+  const currentPL = useMemo(() => {
+    if (!position || !ticker.currentPrice) return null;
+    
+    // Calculate current position value based on live premiums
+    const currentCallPremium = liveGreeks?.call ? 
+      (position.longCallPremium + (ticker.currentPrice - position.atmValue) * (liveGreeks.call.delta || 0)) : 
+      position.longCallPremium;
+    const currentPutPremium = liveGreeks?.put ? 
+      (position.longPutPremium - (ticker.currentPrice - position.atmValue) * (liveGreeks.put.delta || 0)) : 
+      position.longPutPremium;
+    
+    // Entry cost (premium paid)
+    const entryCost = (position.longCallPremium + position.longPutPremium) * 100;
+    
+    // Current value (what we could sell for)
+    const currentValue = (currentCallPremium + currentPutPremium) * 100;
+    
+    // P&L
+    const unrealizedPL = currentValue - entryCost;
+    const percentReturn = (unrealizedPL / entryCost) * 100;
+    
+    return {
+      unrealizedPL,
+      percentReturn,
+      entryCost,
+      currentValue,
+      isProfit: unrealizedPL > 0,
+      isAtBreakeven: Math.abs(unrealizedPL) < 5 // Within $5 of breakeven
+    };
+  }, [position, ticker.currentPrice, liveGreeks]);
+  
+  // Fetch individual IV values and live Greeks when component mounts or ticker changes
   useEffect(() => {
-    const fetchIndividualIV = async () => {
+    const fetchLiveData = async () => {
       try {
         const chainData = await apiRequestWithAuth(`/api/options-chain/${ticker.symbol}?expiration=${position.expirationDate}`);
         
@@ -77,19 +115,38 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
             const selectedPut = puts.find((p: any) => p.strike === putStrike);
             
             if (selectedCall && selectedPut) {
+              // Update IV data
               setIndividualIV({
                 callIV: (selectedCall.impliedVolatility || 0) * 100, // Convert to percentage
                 putIV: (selectedPut.impliedVolatility || 0) * 100    // Convert to percentage
+              });
+              
+              // Update live Greeks data
+              setLiveGreeks({
+                call: {
+                  delta: selectedCall.delta || 0,
+                  theta: selectedCall.theta || 0,
+                  gamma: selectedCall.gamma || 0,
+                  vega: selectedCall.vega || 0,
+                  iv: (selectedCall.impliedVolatility || 0) * 100
+                },
+                put: {
+                  delta: selectedPut.delta || 0,
+                  theta: selectedPut.theta || 0,
+                  gamma: selectedPut.gamma || 0,
+                  vega: selectedPut.vega || 0,
+                  iv: (selectedPut.impliedVolatility || 0) * 100
+                }
               });
             }
           }
         }
       } catch (error) {
-        console.warn('Could not fetch individual IV values:', error);
+        console.warn('Could not fetch live Greeks and IV values:', error);
       }
     };
     
-    fetchIndividualIV();
+    fetchLiveData();
   }, [ticker.symbol, position.expirationDate, position.longCallStrike, position.longPutStrike]);
   
   // Debug strategy type issues
@@ -458,6 +515,49 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
         )}
       </div>
 
+      {/* Current P&L Section */}
+      {currentPL && (
+        <div className="mb-4">
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+            CURRENT POSITION VALUE
+          </h4>
+          <div className={`border rounded-lg p-3 ${
+            currentPL.isProfit 
+              ? 'bg-green-50 border-green-200' 
+              : currentPL.isAtBreakeven 
+                ? 'bg-yellow-50 border-yellow-200'
+                : 'bg-red-50 border-red-200'
+          }`}>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center">
+                <div className={`text-2xl font-bold ${
+                  currentPL.isProfit ? 'text-green-600' : 
+                  currentPL.isAtBreakeven ? 'text-yellow-600' : 'text-red-600'
+                }`} data-testid={`text-current-pl-${ticker.symbol}`}>
+                  {currentPL.unrealizedPL >= 0 ? '+' : ''}${currentPL.unrealizedPL.toFixed(2)}
+                </div>
+                <div className="text-xs text-muted-foreground">Unrealized P&L</div>
+              </div>
+              <div className="text-center">
+                <div className={`text-lg font-bold ${
+                  currentPL.isProfit ? 'text-green-600' : 
+                  currentPL.isAtBreakeven ? 'text-yellow-600' : 'text-red-600'
+                }`} data-testid={`text-current-return-${ticker.symbol}`}>
+                  {currentPL.percentReturn >= 0 ? '+' : ''}{currentPL.percentReturn.toFixed(1)}%
+                </div>
+                <div className="text-xs text-muted-foreground">Return</div>
+              </div>
+            </div>
+            <div className="mt-2 pt-2 border-t border-gray-200">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Entry Cost: ${currentPL.entryCost.toFixed(2)}</span>
+                <span>Current Value: ${currentPL.currentValue.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Conditional Chart Position - Move up for Short Strangle only */}
       {position.strategyType === 'short_strangle' && (
         <div className="mb-4">
@@ -702,45 +802,136 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
         </div>
       </div>
 
-      {/* Greeks Sections */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
-          <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-2">CALL LEG</h4>
-          <div className="space-y-1 text-xs">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Δ</span>
-              <span className="font-medium">0.35 | Θ -0.050</span>
+      {/* Live Greeks Sections */}
+      <div className="mb-4">
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+          LIVE GREEKS & SENSITIVITY
+        </h4>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+            <h5 className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-2">CALL LEG</h5>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Δ (Price)</span>
+                <span className="font-medium text-blue-700">
+                  {liveGreeks?.call.delta ? liveGreeks.call.delta.toFixed(3) : 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Θ (Time)</span>
+                <span className="font-medium text-blue-700">
+                  {liveGreeks?.call.theta ? liveGreeks.call.theta.toFixed(3) : 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Γ (Gamma)</span>
+                <span className="font-medium text-blue-700">
+                  {liveGreeks?.call.gamma ? liveGreeks.call.gamma.toFixed(3) : 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ν (Vol)</span>
+                <span className="font-medium text-blue-700">
+                  {liveGreeks?.call.vega ? liveGreeks.call.vega.toFixed(3) : 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">IV</span>
+                <span className="font-medium text-blue-700">
+                  {(liveGreeks?.call.iv || individualIV?.callIV || position.callIV || position.impliedVolatility).toFixed(1)}%
+                </span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">IV</span>
-              <span className="font-medium">{(individualIV?.callIV || position.callIV || position.impliedVolatility).toFixed(1)}%</span>
+          </div>
+          <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg">
+            <h5 className="text-xs font-bold text-purple-800 uppercase tracking-wide mb-2">PUT LEG</h5>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Δ (Price)</span>
+                <span className="font-medium text-purple-700">
+                  {liveGreeks?.put.delta ? liveGreeks.put.delta.toFixed(3) : 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Θ (Time)</span>
+                <span className="font-medium text-purple-700">
+                  {liveGreeks?.put.theta ? liveGreeks.put.theta.toFixed(3) : 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Γ (Gamma)</span>
+                <span className="font-medium text-purple-700">
+                  {liveGreeks?.put.gamma ? liveGreeks.put.gamma.toFixed(3) : 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ν (Vol)</span>
+                <span className="font-medium text-purple-700">
+                  {liveGreeks?.put.vega ? liveGreeks.put.vega.toFixed(3) : 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">IV</span>
+                <span className="font-medium text-purple-700">
+                  {(liveGreeks?.put.iv || individualIV?.putIV || position.putIV || position.impliedVolatility).toFixed(1)}%
+                </span>
+              </div>
             </div>
           </div>
         </div>
-        <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg">
-          <h4 className="text-xs font-bold text-purple-800 uppercase tracking-wide mb-2">PUT LEG</h4>
-          <div className="space-y-1 text-xs">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Δ</span>
-              <span className="font-medium">-0.28 | Θ -0.040</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">IV</span>
-              <span className="font-medium">{(individualIV?.putIV || position.putIV || position.impliedVolatility).toFixed(1)}%</span>
+        
+        {/* Greeks Summary */}
+        {liveGreeks && (
+          <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <div className="grid grid-cols-4 gap-3 text-center">
+              <div>
+                <div className="text-xs text-muted-foreground">Net Δ</div>
+                <div className="text-sm font-bold">
+                  {((liveGreeks.call.delta + liveGreeks.put.delta) * 100).toFixed(0)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Net Θ</div>
+                <div className="text-sm font-bold text-red-600">
+                  {((liveGreeks.call.theta + liveGreeks.put.theta) * 100).toFixed(0)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Net Γ</div>
+                <div className="text-sm font-bold">
+                  {((liveGreeks.call.gamma + liveGreeks.put.gamma) * 100).toFixed(0)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Net ν</div>
+                <div className="text-sm font-bold">
+                  {((liveGreeks.call.vega + liveGreeks.put.vega) * 100).toFixed(0)}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Bottom Info */}
       <div className="flex justify-between items-center text-xs text-muted-foreground bg-gray-50 border border-gray-200 rounded-lg p-2">
-        <span>Profit Zone: No</span>
+        <span>
+          {currentPL ? (
+            currentPL.isProfit ? '✅ In Profit' : 
+            currentPL.isAtBreakeven ? '⚖️ Near Breakeven' : '❌ In Loss'
+          ) : 'Profit Zone: Calculating...'}
+        </span>
         <span>
           {ticker.earningsDate ? 
             `Next Earnings: ${new Date(ticker.earningsDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}` :
             `Days to Exp: ${position.daysToExpiry}`
           }
         </span>
+        {liveGreeks && (
+          <span className="text-red-600">
+            Daily Theta: ${((liveGreeks.call.theta + liveGreeks.put.theta) * 100).toFixed(0)}
+          </span>
+        )}
       </div>
 
       {/* Strike Selector Modal */}

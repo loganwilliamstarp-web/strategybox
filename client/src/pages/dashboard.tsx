@@ -496,20 +496,7 @@ export default function Dashboard() {
               
               {/* Real-time Status Indicators */}
               <div className="flex items-center space-x-1 sm:space-x-2">
-                {/* WebSocket Connection Status */}
-                {isRealtimeConnected ? (
-                  <Badge variant="default" className="bg-blue-500 hover:bg-blue-600 text-xs sm:text-sm">
-                    <Wifi className="w-3 h-3 mr-1" />
-                    <span className="hidden sm:inline">Real-time</span>
-                    <span className="sm:hidden">Live</span>
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="text-xs sm:text-sm">
-                    <WifiOff className="w-3 h-3 mr-1" />
-                    <span className="hidden sm:inline">Connecting...</span>
-                    <span className="sm:hidden">...</span>
-                  </Badge>
-                )}
+                {/* WebSocket Connection Status - Removed per user request */}
                 
                 {/* Schwab API Status - Hidden per user request (using Alpha Vantage instead) */}
                 {false && schwabStatus?.configured ? (
@@ -604,8 +591,7 @@ export default function Dashboard() {
                   apiStatus?.configured ? (
                     apiStatus.status === "connected" ? (
                       <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-                        <Wifi className="w-3 h-3 mr-1" />
-                        Live Data
+                        <Wifi className="w-3 h-3" />
                       </Badge>
                     ) : (
                       <Badge variant="destructive">
