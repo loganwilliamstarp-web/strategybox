@@ -1206,42 +1206,72 @@ export class DatabaseStorage implements IStorage {
       
       // MarketData.app API returns individual option contracts, not grouped data
       for (const option of optionsData) {
-        // Skip if option doesn't have required fields
-        if (!option.strike || !option.expiration_date || !option.contract_type) {
-          console.warn(`⚠️ Skipping invalid option:`, option);
+        const strikeValue = option?.strike ?? option?.strikePrice ?? option?.strike_price;
+        const expirationRaw = option?.expiration_date ?? option?.expirationDate ?? option?.expiration ?? option?.expirationTimestamp;
+        const contractTypeRaw = option?.contract_type ?? option?.optionType ?? option?.type;
+
+        if (strikeValue === undefined || strikeValue === null || !expirationRaw || !contractTypeRaw) {
+          console.warn(`[optionsChain] Skipping option missing required fields`, option);
           continue;
         }
-        
-        // Convert expiration_date from timestamp to YYYY-MM-DD format if needed
-        let expirationDate = option.expiration_date;
-        if (typeof expirationDate === 'number') {
-          // Convert timestamp to YYYY-MM-DD
-          expirationDate = new Date(expirationDate * 1000).toISOString().split('T')[0];
-        } else if (typeof expirationDate === 'string') {
-          // Ensure it's in YYYY-MM-DD format
-          if (expirationDate.includes('/')) {
-            const date = new Date(expirationDate);
-            expirationDate = date.toISOString().split('T')[0];
+
+        let expirationDate = expirationRaw;
+        if (expirationRaw instanceof Date) {
+          expirationDate = expirationRaw.toISOString().split('T')[0];
+        } else if (typeof expirationRaw === 'number') {
+          expirationDate = new Date(expirationRaw * 1000).toISOString().split('T')[0];
+        } else if (typeof expirationRaw === 'string') {
+          const normalized = expirationRaw.includes('T') ? expirationRaw.split('T')[0] : expirationRaw;
+          if (normalized.includes('/')) {
+            const parsedDate = new Date(normalized);
+            expirationDate = Number.isNaN(parsedDate.getTime()) ? normalized : parsedDate.toISOString().split('T')[0];
+          } else {
+            expirationDate = normalized;
           }
+        } else {
+          expirationDate = String(expirationRaw);
         }
-        
-        console.log(`📅 Processing ${symbol} ${option.contract_type} strike ${option.strike} expiration ${expirationDate}`);
-        
+
+        if (typeof expirationDate === 'string' && expirationDate.includes('T')) {
+          expirationDate = expirationDate.split('T')[0];
+        }
+
+        const contractType = String(contractTypeRaw).toLowerCase();
+        if (contractType !== 'call' && contractType !== 'put') {
+          console.warn(`[optionsChain] Skipping option with unsupported contract type: ${contractTypeRaw}`);
+          continue;
+        }
+
+        const numericStrike = typeof strikeValue === 'string' ? Number.parseFloat(strikeValue) : Number(strikeValue);
+        if (!Number.isFinite(numericStrike)) {
+          console.warn(`[optionsChain] Skipping option with non-numeric strike`, strikeValue);
+          continue;
+        }
+
+        const bid = option?.bid ?? option?.marketBid ?? option?.bestBid ?? 0;
+        const ask = option?.ask ?? option?.marketAsk ?? option?.bestAsk ?? 0;
+        const lastPrice = option?.last ?? option?.lastPrice ?? option?.mid ?? option?.midPrice ?? 0;
+        const volume = option?.volume ?? option?.totalVolume ?? 0;
+        const openInterest = option?.open_interest ?? option?.openInterest ?? option?.openinterest ?? 0;
+        const impliedVolatility = option?.implied_volatility ?? option?.impliedVolatility ?? 0;
+
+        console.log(`[optionsChain] Processing ${symbol} ${contractType} strike ${numericStrike} expiration ${expirationDate}`);
+
         chainRecords.push({
           symbol,
-          expirationDate: expirationDate,
-          strike: option.strike,
-          optionType: option.contract_type, // 'call' or 'put'
-          bid: option.bid || 0,
-          ask: option.ask || 0,
-          lastPrice: option.last || 0,
-          volume: option.volume || 0,
-          openInterest: option.open_interest || 0,
-          impliedVolatility: option.implied_volatility || 0,
-          delta: option.delta || 0,
-          gamma: option.gamma || 0,
-          theta: option.theta || 0,
-          vega: option.vega || 0,
+          expirationDate: typeof expirationDate === 'string' ? expirationDate : String(expirationDate),
+          strike: numericStrike,
+          optionType: contractType,
+          bid,
+          ask,
+          lastPrice,
+          volume,
+          openInterest,
+          impliedVolatility,
+          delta: option?.delta ?? 0,
+          gamma: option?.gamma ?? 0,
+          theta: option?.theta ?? 0,
+          vega: option?.vega ?? 0,
         });
       }
       

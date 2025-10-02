@@ -29,19 +29,47 @@ export function registerOptionsChainRoutes(app: Express): void {
       sampleRecord: optionsData[0] || null
     });
     
-      // FORCE FRESH FETCH FOR TESTING - Always fetch fresh data
-      console.log(`🔄 FORCING FRESH FETCH FOR TESTING - Always fetching fresh data for ${symbol}`);
-      const needsFreshData = true; // Force fresh fetch
-      
-      if (needsFreshData) {
-        console.log(`⚠️ No options data found in database for ${symbol}${expirationDate ? ` with expiration ${expirationDate}` : ''} - attempting to populate from API`);
-        console.log(`🔍 Database check: Found ${optionsData.length} options, requested expiration: ${expirationDate}`);
-        if (optionsData.length > 0) {
-          const availableExpirations = [...new Set(optionsData.map(opt => opt.expirationDate))].sort();
-          console.log(`🔍 Available expirations in database: ${availableExpirations.join(', ')}`);
+      const hasDbData = optionsData.length > 0;
+      const STALE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
+      let needsFreshData = !hasDbData;
+
+      if (hasDbData) {
+        const newestUpdatedAt = optionsData.reduce((latest, option) => {
+          const rawUpdatedAt = option?.updatedAt ? new Date(option.updatedAt).getTime() : NaN;
+          if (Number.isFinite(rawUpdatedAt) && rawUpdatedAt > latest) {
+            return rawUpdatedAt;
+          }
+          return latest;
+        }, 0);
+
+        if (newestUpdatedAt === 0) {
+          console.log(`[optionsChain] ${symbol} database rows missing updatedAt; treating as fresh cache`);
+          needsFreshData = false;
+        } else {
+          const ageMs = Date.now() - newestUpdatedAt;
+          const ageSeconds = Math.round(ageMs / 1000);
+          if (ageMs > STALE_THRESHOLD_MS) {
+            console.log(`[optionsChain] ${symbol} database data is stale (${ageSeconds}s old); refreshing from API`);
+            needsFreshData = true;
+          } else {
+            console.log(`[optionsChain] ${symbol} database data is fresh (${ageSeconds}s old); using cached rows`);
+            needsFreshData = false;
+          }
         }
-        
-        // Try to populate from API if no database data exists
+      } else {
+        console.log(`[optionsChain] No options data cached in database for ${symbol}${expirationDate ? ` with expiration ${expirationDate}` : ''}`);
+      }
+
+      if (needsFreshData) {
+        console.log(`[optionsChain] Database check: ${optionsData.length} rows currently cached for ${symbol} (requested expiration: ${expirationDate || 'all'})`);
+        if (hasDbData) {
+          const availableExpirations = [...new Set(optionsData.map(opt => opt.expirationDate))].sort();
+          console.log(`[optionsChain] Cached expirations before refresh: ${availableExpirations.join(', ')}`);
+        } else {
+          console.log(`[optionsChain] Cache empty; requesting fresh options data from API`);
+        }
+
+        // Try to populate from API if cache is empty or stale
         try {
           const { optionsApiService } = await import('../optionsApiService');
           
