@@ -500,15 +500,7 @@ export class PerformanceOptimizer {
     }
   }
 
-  /**
-   * Clear all caches to force fresh data
-   */
-  clearAllCaches(): void {
-    console.log(`🧹 Clearing all performance optimizer caches...`);
-    this.quoteCache.clear();
-    this.optionsCache.clear();
-    console.log(`✅ Performance optimizer caches cleared`);
-  }
+  // Removed duplicate clearAllCaches method - already exists at line 163
 
   /**
    * Force refresh all cached data for manual refresh operations

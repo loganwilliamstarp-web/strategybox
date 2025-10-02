@@ -284,11 +284,15 @@ class MarketDataApiService implements OptionsDataProvider {
       let currentPrice: number;
       if (realTimePrice) {
         currentPrice = realTimePrice;
+      } else {
         const stockQuote = await this.getStockQuote(symbol);
         currentPrice = stockQuote?.currentPrice || 100;
+      }
       
       // AAPL SPECIFIC PRICE LOGGING
       if (symbol === 'AAPL') {
+        console.log(`🍎 AAPL Options Chain Request - Price: $${currentPrice}, Expiration: ${expiration}`);
+      }
       
       // Use the correct options chain endpoint with cost optimization parameters
       // strikeLimit=20 limits to exactly 20 strikes for cost optimization
@@ -299,7 +303,7 @@ class MarketDataApiService implements OptionsDataProvider {
       if (chainData.s !== 'ok' || !chainData.optionSymbol || chainData.optionSymbol.length === 0) {
         console.warn(`⚠️ No options found for ${symbol} ${expiration}`);
         return [];
-      
+      }
       
       // DETAILED AAPL LOGGING: If this is AAPL, log detailed expiration and contract data
       if (symbol === 'AAPL') {
@@ -312,7 +316,9 @@ class MarketDataApiService implements OptionsDataProvider {
               dateObject: date
             };
           });
+          console.log(`🍎 AAPL Expiration dates:`, expirationDates);
         }
+      }
       
       const contracts: OptionContract[] = [];
       
@@ -339,14 +345,14 @@ class MarketDataApiService implements OptionsDataProvider {
         
         // DETAILED AAPL CONTRACT LOGGING
         if (symbol === 'AAPL') {
-          
           // Compare with Charles Schwab data
           if (side === 'call' && strike === 235) {
+            console.log(`🍎 AAPL Call 235: Bid=${bid}, Ask=${ask}, Last=${last}, IV=${impliedVolatility}`);
           }
           if (side === 'put' && strike === 237.5) {
+            console.log(`🍎 AAPL Put 237.5: Bid=${bid}, Ask=${ask}, Last=${last}, IV=${impliedVolatility}`);
           }
         }
-        
         
         contracts.push({
           ticker: optionSymbol,
@@ -366,6 +372,7 @@ class MarketDataApiService implements OptionsDataProvider {
           expirationLabel: expirationDate,
           daysUntilExpiration: chainData.dte?.[i] || Math.ceil((new Date(expirationDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
         });
+      }
       
       return contracts;
       
@@ -383,8 +390,10 @@ class MarketDataApiService implements OptionsDataProvider {
       let currentPrice: number;
       if (realTimePrice) {
         currentPrice = realTimePrice;
+      } else {
         const stockQuote = await this.getStockQuote(symbol);
         currentPrice = stockQuote?.currentPrice || 100;
+      }
 
       // STEP 1: Get all available expirations with date range to capture all Friday expirations
       
@@ -396,7 +405,6 @@ class MarketDataApiService implements OptionsDataProvider {
       const fromDateStr = fromDate.toISOString().split('T')[0];
       const toDateStr = toDate.toISOString().split('T')[0];
       
-      
       const allExpirationsData: MarketDataOptionsChain = await this.makeRequest(
         `/v1/options/chain/${symbol}/?from=${fromDateStr}&to=${toDateStr}&strikeLimit=1000`
       );
@@ -404,6 +412,7 @@ class MarketDataApiService implements OptionsDataProvider {
       if (allExpirationsData.s !== 'ok' || !allExpirationsData.expiration) {
         console.warn(`⚠️ No expiration data found for ${symbol}`);
         return null;
+      }
 
       // Extract unique expiration dates
       const uniqueExpirations = [...new Set(allExpirationsData.expiration.map(ts => {
@@ -457,12 +466,15 @@ class MarketDataApiService implements OptionsDataProvider {
             daysUntilExpiration: allExpirationsData.dte?.[i] || Math.ceil((new Date(expirationDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
           });
         }
+      } else {
         console.warn('[MarketData] No options data returned in comprehensive call', { symbol });
-      
+      }
 
       // FINAL SUMMARY LOGGING
       if (symbol === 'AAPL') {
         const expirations = [...new Set(allOptionsByExpiration.map(opt => opt.expiration_date))].sort();
+        console.log(`🍎 AAPL Final Summary: ${expirations.length} expirations, ${allOptionsByExpiration.length} total options`);
+      }
 
       // Transform flat options array into chains structure
       const chains: { [expirationDate: string]: { calls: OptionContract[], puts: OptionContract[] } } = {};
@@ -482,11 +494,13 @@ class MarketDataApiService implements OptionsDataProvider {
         } else {
           chains[expDate].puts.push(option);
         }
+      }
       
       // Sort chains by strike within each expiration
       for (const expDate of Object.keys(chains)) {
         chains[expDate].calls.sort((a, b) => a.strike - b.strike);
         chains[expDate].puts.sort((a, b) => a.strike - b.strike);
+      }
       
       const sortedOptions = allOptionsByExpiration.sort((a, b) => {
         // Sort by expiration first, then by strike
@@ -495,7 +509,6 @@ class MarketDataApiService implements OptionsDataProvider {
         }
         return a.strike - b.strike;
       });
-      
       
       return {
         symbol,
