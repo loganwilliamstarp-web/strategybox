@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,9 +26,36 @@ import {
   BarChart3,
   Calculator,
   Eye,
-  Copy
+  Copy,
+  Trash2,
+  Plus,
+  Minus
 } from 'lucide-react';
 import { STRATEGY_LIBRARY, type StrategyDefinition } from '@/data/strategy-library';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 // Strategy Builder Types
 interface StrategyLeg {
@@ -142,25 +169,106 @@ export default function StrategyBuilder() {
     return 'custom-strategy';
   };
 
+  // Calculate P&L at a specific stock price
+  const calculatePLAtPrice = (legs: StrategyLeg[], stockPrice: number): number => {
+    return legs.reduce((totalPL, leg) => {
+      let intrinsicValue = 0;
+      
+      if (leg.type === 'call') {
+        intrinsicValue = Math.max(0, stockPrice - leg.strike);
+      } else {
+        intrinsicValue = Math.max(0, leg.strike - stockPrice);
+      }
+      
+      const optionValue = intrinsicValue * leg.quantity;
+      const premiumPaid = (leg.premium || 0) * leg.quantity;
+      
+      if (leg.action === 'buy') {
+        return totalPL + (optionValue - premiumPaid);
+      } else {
+        return totalPL + (premiumPaid - optionValue);
+      }
+    }, 0);
+  };
+
+  // Generate P&L data for chart
+  const generatePLData = (legs: StrategyLeg[]) => {
+    if (legs.length === 0) return { labels: [], datasets: [] };
+    
+    const currentPrice = canvas.currentPrice;
+    const minPrice = currentPrice * 0.8;
+    const maxPrice = currentPrice * 1.2;
+    const step = (maxPrice - minPrice) / 50;
+    
+    const labels = [];
+    const plData = [];
+    
+    for (let price = minPrice; price <= maxPrice; price += step) {
+      labels.push(price.toFixed(2));
+      plData.push(calculatePLAtPrice(legs, price));
+    }
+    
+    return {
+      labels,
+      datasets: [{
+        label: 'P&L',
+        data: plData,
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.1
+      }]
+    };
+  };
+
   // Calculate strategy risk metrics
   const calculateRisk = (legs: StrategyLeg[]): StrategyRisk => {
-    // Mock calculation - in real app, this would use Black-Scholes
-    const totalCost = legs.reduce((sum, leg) => {
-      const cost = leg.premium || 2.50;
-      return sum + (leg.action === 'buy' ? cost : -cost) * leg.quantity;
-    }, 0);
+    if (legs.length === 0) {
+      return {
+        maxLoss: 0,
+        maxGain: 0,
+        breakevens: [],
+        probabilityOfProfit: 0,
+        expectedValue: 0,
+        riskRewardRatio: 0
+      };
+    }
 
-    const maxLoss = Math.abs(Math.min(0, totalCost));
-    const maxGain = Math.max(0, totalCost * 2); // Simplified
-    const breakevens = [canvas.currentPrice * 0.95, canvas.currentPrice * 1.05]; // Mock
-    const probabilityOfProfit = 65; // Mock
-    const expectedValue = totalCost * 0.8; // Mock
-    const riskRewardRatio = maxGain / maxLoss || 0;
+    const currentPrice = canvas.currentPrice;
+    const minPrice = currentPrice * 0.7;
+    const maxPrice = currentPrice * 1.3;
+    const step = (maxPrice - minPrice) / 100;
+    
+    let maxLoss = 0;
+    let maxGain = 0;
+    const breakevens = [];
+    
+    // Find max loss/gain and breakevens
+    for (let price = minPrice; price <= maxPrice; price += step) {
+      const pl = calculatePLAtPrice(legs, price);
+      maxLoss = Math.min(maxLoss, pl);
+      maxGain = Math.max(maxGain, pl);
+      
+      // Find breakeven points (where P&L crosses zero)
+      if (Math.abs(pl) < 0.5) {
+        breakevens.push(price);
+      }
+    }
+    
+    // Remove duplicate breakevens (within 1% of each other)
+    const uniqueBreakevens = breakevens.filter((be, index) => {
+      return index === 0 || Math.abs(be - breakevens[index - 1]) > currentPrice * 0.01;
+    });
+    
+    const probabilityOfProfit = 65; // Mock - would need options pricing model
+    const expectedValue = (maxGain + maxLoss) / 2; // Simplified
+    const riskRewardRatio = Math.abs(maxGain / maxLoss) || 0;
 
     return {
-      maxLoss,
+      maxLoss: Math.abs(maxLoss),
       maxGain,
-      breakevens,
+      breakevens: uniqueBreakevens.slice(0, 3), // Limit to 3 breakevens
       probabilityOfProfit,
       expectedValue,
       riskRewardRatio
@@ -168,6 +276,7 @@ export default function StrategyBuilder() {
   };
 
   const detectedStrategy = detectStrategy(canvas.legs);
+  const plChartData = generatePLData(canvas.legs);
   const riskMetrics = calculateRisk(canvas.legs);
 
   const addLeg = (type: 'call' | 'put', action: 'buy' | 'sell') => {
@@ -207,21 +316,177 @@ export default function StrategyBuilder() {
     const strategy = STRATEGY_LIBRARY.find(s => s.id === strategyId);
     if (!strategy) return;
 
-    // Convert strategy definition to legs (simplified)
     const legs: StrategyLeg[] = [];
+    const currentPrice = canvas.currentPrice;
     
-    if (strategy.id === 'long-strangle') {
-      legs.push(
-        { id: 'leg-1', type: 'call', action: 'buy', strike: canvas.currentPrice * 1.05, expiration: selectedExpiration, quantity: 1, premium: 3.20 },
-        { id: 'leg-2', type: 'put', action: 'buy', strike: canvas.currentPrice * 0.95, expiration: selectedExpiration, quantity: 1, premium: 2.80 }
-      );
-    } else if (strategy.id === 'iron-condor') {
-      legs.push(
-        { id: 'leg-1', type: 'call', action: 'sell', strike: canvas.currentPrice * 1.02, expiration: selectedExpiration, quantity: 1, premium: 2.10 },
-        { id: 'leg-2', type: 'call', action: 'buy', strike: canvas.currentPrice * 1.05, expiration: selectedExpiration, quantity: 1, premium: 1.20 },
-        { id: 'leg-3', type: 'put', action: 'sell', strike: canvas.currentPrice * 0.98, expiration: selectedExpiration, quantity: 1, premium: 1.90 },
-        { id: 'leg-4', type: 'put', action: 'buy', strike: canvas.currentPrice * 0.95, expiration: selectedExpiration, quantity: 1, premium: 1.10 }
-      );
+    // Generate realistic premiums based on current price and strategy
+    const generatePremium = (strike: number, type: 'call' | 'put', action: 'buy' | 'sell') => {
+      const distance = Math.abs(strike - currentPrice);
+      const basePremium = Math.max(0.5, distance * 0.1 + Math.random() * 2);
+      return action === 'sell' ? basePremium : basePremium + Math.random() * 1;
+    };
+
+    switch (strategyId) {
+      // Single Leg Strategies
+      case 'long-call':
+        legs.push({
+          id: 'leg-1', type: 'call', action: 'buy', 
+          strike: Math.round(currentPrice), 
+          expiration: selectedExpiration, 
+          quantity: 1, 
+          premium: generatePremium(currentPrice, 'call', 'buy')
+        });
+        break;
+        
+      case 'long-put':
+        legs.push({
+          id: 'leg-1', type: 'put', action: 'buy', 
+          strike: Math.round(currentPrice), 
+          expiration: selectedExpiration, 
+          quantity: 1, 
+          premium: generatePremium(currentPrice, 'put', 'buy')
+        });
+        break;
+        
+      case 'short-call':
+        legs.push({
+          id: 'leg-1', type: 'call', action: 'sell', 
+          strike: Math.round(currentPrice * 1.02), 
+          expiration: selectedExpiration, 
+          quantity: 1, 
+          premium: generatePremium(currentPrice * 1.02, 'call', 'sell')
+        });
+        break;
+        
+      case 'short-put':
+        legs.push({
+          id: 'leg-1', type: 'put', action: 'sell', 
+          strike: Math.round(currentPrice * 0.98), 
+          expiration: selectedExpiration, 
+          quantity: 1, 
+          premium: generatePremium(currentPrice * 0.98, 'put', 'sell')
+        });
+        break;
+
+      // Two Leg Strategies
+      case 'long-strangle':
+        legs.push(
+          { id: 'leg-1', type: 'call', action: 'buy', strike: Math.round(currentPrice * 1.05), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 1.05, 'call', 'buy') },
+          { id: 'leg-2', type: 'put', action: 'buy', strike: Math.round(currentPrice * 0.95), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 0.95, 'put', 'buy') }
+        );
+        break;
+        
+      case 'short-strangle':
+        legs.push(
+          { id: 'leg-1', type: 'call', action: 'sell', strike: Math.round(currentPrice * 1.05), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 1.05, 'call', 'sell') },
+          { id: 'leg-2', type: 'put', action: 'sell', strike: Math.round(currentPrice * 0.95), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 0.95, 'put', 'sell') }
+        );
+        break;
+        
+      case 'long-straddle':
+        legs.push(
+          { id: 'leg-1', type: 'call', action: 'buy', strike: Math.round(currentPrice), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice, 'call', 'buy') },
+          { id: 'leg-2', type: 'put', action: 'buy', strike: Math.round(currentPrice), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice, 'put', 'buy') }
+        );
+        break;
+        
+      case 'short-straddle':
+        legs.push(
+          { id: 'leg-1', type: 'call', action: 'sell', strike: Math.round(currentPrice), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice, 'call', 'sell') },
+          { id: 'leg-2', type: 'put', action: 'sell', strike: Math.round(currentPrice), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice, 'put', 'sell') }
+        );
+        break;
+
+      // Spread Strategies
+      case 'bull-call-spread':
+        legs.push(
+          { id: 'leg-1', type: 'call', action: 'buy', strike: Math.round(currentPrice * 0.98), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 0.98, 'call', 'buy') },
+          { id: 'leg-2', type: 'call', action: 'sell', strike: Math.round(currentPrice * 1.02), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 1.02, 'call', 'sell') }
+        );
+        break;
+        
+      case 'bear-call-spread':
+        legs.push(
+          { id: 'leg-1', type: 'call', action: 'sell', strike: Math.round(currentPrice * 0.98), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 0.98, 'call', 'sell') },
+          { id: 'leg-2', type: 'call', action: 'buy', strike: Math.round(currentPrice * 1.02), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 1.02, 'call', 'buy') }
+        );
+        break;
+        
+      case 'bull-put-spread':
+        legs.push(
+          { id: 'leg-1', type: 'put', action: 'sell', strike: Math.round(currentPrice * 1.02), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 1.02, 'put', 'sell') },
+          { id: 'leg-2', type: 'put', action: 'buy', strike: Math.round(currentPrice * 0.98), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 0.98, 'put', 'buy') }
+        );
+        break;
+        
+      case 'bear-put-spread':
+        legs.push(
+          { id: 'leg-1', type: 'put', action: 'buy', strike: Math.round(currentPrice * 1.02), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 1.02, 'put', 'buy') },
+          { id: 'leg-2', type: 'put', action: 'sell', strike: Math.round(currentPrice * 0.98), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 0.98, 'put', 'sell') }
+        );
+        break;
+
+      // Four Leg Strategies
+      case 'iron-condor':
+        legs.push(
+          { id: 'leg-1', type: 'call', action: 'sell', strike: Math.round(currentPrice * 1.02), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 1.02, 'call', 'sell') },
+          { id: 'leg-2', type: 'call', action: 'buy', strike: Math.round(currentPrice * 1.05), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 1.05, 'call', 'buy') },
+          { id: 'leg-3', type: 'put', action: 'sell', strike: Math.round(currentPrice * 0.98), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 0.98, 'put', 'sell') },
+          { id: 'leg-4', type: 'put', action: 'buy', strike: Math.round(currentPrice * 0.95), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 0.95, 'put', 'buy') }
+        );
+        break;
+        
+      case 'iron-butterfly':
+        legs.push(
+          { id: 'leg-1', type: 'call', action: 'buy', strike: Math.round(currentPrice * 0.97), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 0.97, 'call', 'buy') },
+          { id: 'leg-2', type: 'call', action: 'sell', strike: Math.round(currentPrice), expiration: selectedExpiration, quantity: 2, premium: generatePremium(currentPrice, 'call', 'sell') },
+          { id: 'leg-3', type: 'call', action: 'buy', strike: Math.round(currentPrice * 1.03), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 1.03, 'call', 'buy') },
+          { id: 'leg-4', type: 'put', action: 'sell', strike: Math.round(currentPrice), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice, 'put', 'sell') }
+        );
+        break;
+
+      // Calendar Spreads
+      case 'call-calendar':
+        legs.push(
+          { id: 'leg-1', type: 'call', action: 'sell', strike: Math.round(currentPrice), expiration: MOCK_EXPIRATIONS[0], quantity: 1, premium: generatePremium(currentPrice, 'call', 'sell') },
+          { id: 'leg-2', type: 'call', action: 'buy', strike: Math.round(currentPrice), expiration: MOCK_EXPIRATIONS[1], quantity: 1, premium: generatePremium(currentPrice, 'call', 'buy') }
+        );
+        break;
+        
+      case 'put-calendar':
+        legs.push(
+          { id: 'leg-1', type: 'put', action: 'sell', strike: Math.round(currentPrice), expiration: MOCK_EXPIRATIONS[0], quantity: 1, premium: generatePremium(currentPrice, 'put', 'sell') },
+          { id: 'leg-2', type: 'put', action: 'buy', strike: Math.round(currentPrice), expiration: MOCK_EXPIRATIONS[1], quantity: 1, premium: generatePremium(currentPrice, 'put', 'buy') }
+        );
+        break;
+
+      // Butterfly Spreads
+      case 'call-butterfly':
+        legs.push(
+          { id: 'leg-1', type: 'call', action: 'buy', strike: Math.round(currentPrice * 0.95), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 0.95, 'call', 'buy') },
+          { id: 'leg-2', type: 'call', action: 'sell', strike: Math.round(currentPrice), expiration: selectedExpiration, quantity: 2, premium: generatePremium(currentPrice, 'call', 'sell') },
+          { id: 'leg-3', type: 'call', action: 'buy', strike: Math.round(currentPrice * 1.05), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 1.05, 'call', 'buy') }
+        );
+        break;
+        
+      case 'put-butterfly':
+        legs.push(
+          { id: 'leg-1', type: 'put', action: 'buy', strike: Math.round(currentPrice * 1.05), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 1.05, 'put', 'buy') },
+          { id: 'leg-2', type: 'put', action: 'sell', strike: Math.round(currentPrice), expiration: selectedExpiration, quantity: 2, premium: generatePremium(currentPrice, 'put', 'sell') },
+          { id: 'leg-3', type: 'put', action: 'buy', strike: Math.round(currentPrice * 0.95), expiration: selectedExpiration, quantity: 1, premium: generatePremium(currentPrice * 0.95, 'put', 'buy') }
+        );
+        break;
+
+      default:
+        // For any unmatched strategy, create a basic long call
+        legs.push({
+          id: 'leg-1', type: 'call', action: 'buy', 
+          strike: Math.round(currentPrice), 
+          expiration: selectedExpiration, 
+          quantity: 1, 
+          premium: generatePremium(currentPrice, 'call', 'buy')
+        });
+        break;
     }
 
     setCanvas(prev => ({ ...prev, legs }));
@@ -437,22 +702,44 @@ export default function StrategyBuilder() {
                   </h3>
                   <div className="flex space-x-2">
                     <Button variant="outline" size="sm" onClick={clearCanvas}>
-                      <RotateCcw className="w-4 h-4 mr-2" />
+                      <Trash2 className="w-4 h-4 mr-2" />
                       Clear
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
                       onClick={() => addLeg('call', 'buy')}
+                      className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
                     >
-                      + Call
+                      <Plus className="w-4 h-4 mr-1" />
+                      Buy Call
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => addLeg('call', 'sell')}
+                      className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                    >
+                      <Minus className="w-4 h-4 mr-1" />
+                      Sell Call
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
                       onClick={() => addLeg('put', 'buy')}
+                      className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
                     >
-                      + Put
+                      <Plus className="w-4 h-4 mr-1" />
+                      Buy Put
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => addLeg('put', 'sell')}
+                      className="bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                    >
+                      <Minus className="w-4 h-4 mr-1" />
+                      Sell Put
                     </Button>
                   </div>
                 </div>
@@ -569,8 +856,75 @@ export default function StrategyBuilder() {
             </Card>
           </div>
 
-          {/* Right Sidebar - Analysis */}
-          <div className="lg:col-span-1">
+          {/* Right Sidebar - Analysis & Charts */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* P&L Chart */}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center">
+                <BarChart3 className="w-5 h-5 mr-2" />
+                P&L Chart
+              </h3>
+
+              {canvas.legs.length > 0 && plChartData.labels.length > 0 ? (
+                <div className="h-64">
+                  <Line 
+                    data={plChartData} 
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          display: false
+                        },
+                        tooltip: {
+                          callbacks: {
+                            label: function(context) {
+                              return `P&L: $${context.parsed.y.toFixed(2)}`;
+                            },
+                            title: function(context) {
+                              return `Stock Price: $${context[0].label}`;
+                            }
+                          }
+                        }
+                      },
+                      scales: {
+                        x: {
+                          title: {
+                            display: true,
+                            text: 'Stock Price ($)'
+                          }
+                        },
+                        y: {
+                          title: {
+                            display: true,
+                            text: 'P&L ($)'
+                          },
+                          grid: {
+                            color: function(context) {
+                              return context.tick.value === 0 ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.1)';
+                            }
+                          }
+                        }
+                      },
+                      elements: {
+                        point: {
+                          radius: 0
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-gray-500">
+                  <div className="text-center">
+                    <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <p className="text-sm">Add strategy legs to see P&L chart</p>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* Risk Analysis */}
             <Card className="p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center">
                 <Calculator className="w-5 h-5 mr-2" />
@@ -579,36 +933,48 @@ export default function StrategyBuilder() {
 
               {canvas.legs.length > 0 ? (
                 <div className="space-y-4">
-                  {/* Risk Metrics */}
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Max Loss</span>
-                      <span className="font-medium text-red-600">${riskMetrics.maxLoss.toFixed(2)}</span>
+                  {/* Risk Metrics Grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <div className="text-xs text-red-600 font-medium">Max Loss</div>
+                      <div className="text-lg font-bold text-red-700">${riskMetrics.maxLoss.toFixed(2)}</div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Max Gain</span>
-                      <span className="font-medium text-green-600">${riskMetrics.maxGain.toFixed(2)}</span>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="text-xs text-green-600 font-medium">Max Gain</div>
+                      <div className="text-lg font-bold text-green-700">${riskMetrics.maxGain.toFixed(2)}</div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Risk/Reward</span>
-                      <span className="font-medium">{riskMetrics.riskRewardRatio.toFixed(2)}</span>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="text-xs text-blue-600 font-medium">Risk/Reward</div>
+                      <div className="text-lg font-bold text-blue-700">{riskMetrics.riskRewardRatio.toFixed(2)}</div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Probability of Profit</span>
-                      <span className="font-medium">{riskMetrics.probabilityOfProfit}%</span>
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                      <div className="text-xs text-purple-600 font-medium">Win Rate</div>
+                      <div className="text-lg font-bold text-purple-700">{riskMetrics.probabilityOfProfit}%</div>
                     </div>
                   </div>
 
                   {/* Breakevens */}
-                  <div>
-                    <h4 className="text-sm font-medium mb-2">Breakeven Points</h4>
-                    <div className="space-y-1">
-                      {riskMetrics.breakevens.map((be, index) => (
-                        <div key={index} className="text-sm text-gray-600">
-                          ${be.toFixed(2)}
-                        </div>
-                      ))}
+                  {riskMetrics.breakevens.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Breakeven Points</h4>
+                      <div className="space-y-1">
+                        {riskMetrics.breakevens.map((be, index) => (
+                          <div key={index} className="flex items-center justify-between bg-gray-50 rounded px-3 py-2">
+                            <span className="text-sm text-gray-600">BE{index + 1}</span>
+                            <span className="font-medium">${be.toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
+                  )}
+
+                  {/* Current P&L */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <div className="text-xs text-gray-600 font-medium mb-1">Current P&L</div>
+                    <div className={`text-lg font-bold ${calculatePLAtPrice(canvas.legs, canvas.currentPrice) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {calculatePLAtPrice(canvas.legs, canvas.currentPrice) >= 0 ? '+' : ''}${calculatePLAtPrice(canvas.legs, canvas.currentPrice).toFixed(2)}
+                    </div>
+                    <div className="text-xs text-gray-500">at ${canvas.currentPrice}</div>
                   </div>
 
                   {/* Action Buttons */}
