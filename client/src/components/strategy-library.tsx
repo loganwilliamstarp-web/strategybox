@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -66,6 +66,12 @@ const getActiveSummary = (
 export function StrategyLibrary({ activeStrategies }: StrategyLibraryProps) {
   const [complexityFilter, setComplexityFilter] = useState<ComplexityFilterValue>('all');
   const [strategyFilter, setStrategyFilter] = useState<StrategyFilterValue>('all');
+  const [displayedCount, setDisplayedCount] = useState(6);
+  const [isLoading, setIsLoading] = useState(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const STRATEGIES_PER_PAGE = 6;
 
   const groupedStrategies = useMemo(() => {
     return COMPLEXITY_SEQUENCE.map((complexity) => ({
@@ -89,6 +95,50 @@ export function StrategyLibrary({ activeStrategies }: StrategyLibraryProps) {
     return list;
   }, [complexityFilter, strategyFilter]);
 
+  const displayedStrategies = useMemo(() => {
+    return filteredStrategies.slice(0, displayedCount);
+  }, [filteredStrategies, displayedCount]);
+
+  const hasMoreStrategies = displayedCount < filteredStrategies.length;
+
+  // Reset displayed count when filters change
+  useEffect(() => {
+    setDisplayedCount(STRATEGIES_PER_PAGE);
+  }, [complexityFilter, strategyFilter]);
+
+  // Load more strategies
+  const loadMoreStrategies = useCallback(() => {
+    if (isLoading || !hasMoreStrategies) return;
+    
+    setIsLoading(true);
+    setTimeout(() => {
+      setDisplayedCount(prev => Math.min(prev + STRATEGIES_PER_PAGE, filteredStrategies.length));
+      setIsLoading(false);
+    }, 300); // Small delay for better UX
+  }, [isLoading, hasMoreStrategies, filteredStrategies.length]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (observerRef.current) observerRef.current.disconnect();
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreStrategies && !isLoading) {
+          loadMoreStrategies();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (observerRef.current) observerRef.current.disconnect();
+    };
+  }, [hasMoreStrategies, isLoading, loadMoreStrategies]);
+
   const activeComplexityLabel =
     complexityFilter === 'all'
       ? 'All complexity levels'
@@ -107,7 +157,7 @@ export function StrategyLibrary({ activeStrategies }: StrategyLibraryProps) {
             </p>
           </div>
           <Badge variant="outline" className="text-sm font-medium">
-            {filteredStrategies.length} strategy{filteredStrategies.length === 1 ? '' : ' cards'}
+            {displayedStrategies.length} of {filteredStrategies.length} strategies
           </Badge>
         </header>
 
@@ -190,7 +240,7 @@ export function StrategyLibrary({ activeStrategies }: StrategyLibraryProps) {
         </div>
 
         <div className="text-xs text-muted-foreground">
-          Showing {filteredStrategies.length} of {STRATEGY_LIBRARY.length} strategies — {activeComplexityLabel}.
+          Showing {displayedStrategies.length} of {filteredStrategies.length} strategies — {activeComplexityLabel}.
         </div>
 
         {filteredStrategies.length === 0 ? (
@@ -199,7 +249,7 @@ export function StrategyLibrary({ activeStrategies }: StrategyLibraryProps) {
           </div>
         ) : (
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {filteredStrategies.map((strategy) => {
+            {displayedStrategies.map((strategy) => {
               const usage = getActiveSummary(strategy.id, portfolioUsage);
               const tickers = usage?.tickers ?? [];
               const previewTickers = tickers.slice(0, 3).join(', ');
@@ -266,6 +316,35 @@ export function StrategyLibrary({ activeStrategies }: StrategyLibraryProps) {
                 </Card>
               );
             })}
+          </div>
+        )}
+
+        {/* Infinite scroll trigger and loading indicator */}
+        {hasMoreStrategies && (
+          <div ref={loadMoreRef} className="flex justify-center py-6">
+            {isLoading ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Loading more strategies...</span>
+              </div>
+            ) : (
+              <Button 
+                variant="outline" 
+                onClick={loadMoreStrategies}
+                className="text-sm"
+              >
+                Load More Strategies
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* End of results indicator */}
+        {!hasMoreStrategies && displayedStrategies.length > 0 && (
+          <div className="text-center py-4">
+            <div className="text-xs text-muted-foreground">
+              You've reached the end of the strategy library
+            </div>
           </div>
         )}
       </Card>
