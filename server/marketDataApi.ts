@@ -76,7 +76,19 @@ class MarketDataApiService implements OptionsDataProvider {
       this.apiKey = '';
       this.finnhubApiKey = '';
 
+      console.log('[MarketData] Starting initialization...', {
+        nodeEnv: process.env.NODE_ENV,
+        hasEnvVar: !!process.env.MARKETDATA_API_KEY,
+        envVarLength: process.env.MARKETDATA_API_KEY?.length || 0
+      });
+
       const vaultApiKey = await SupabaseSecrets.getSecret('MARKETDATA_API_KEY');
+      console.log('[MarketData] Vault API key result:', {
+        hasKey: !!vaultApiKey,
+        keyLength: vaultApiKey?.length || 0,
+        keyPreview: vaultApiKey ? `${vaultApiKey.substring(0, 8)}...` : 'null'
+      });
+
       if (
         vaultApiKey &&
         vaultApiKey !== 'demo-key' &&
@@ -86,7 +98,10 @@ class MarketDataApiService implements OptionsDataProvider {
         this.apiKey = vaultApiKey;
         this.logInfo('Loaded MarketData API key from Supabase Vault');
       } else {
-        console.error('[MarketData] No valid MarketData API key found in Supabase Vault', { value: vaultApiKey });
+        console.error('[MarketData] No valid MarketData API key found in Supabase Vault', { 
+          value: vaultApiKey,
+          isValid: vaultApiKey && vaultApiKey !== 'demo-key' && vaultApiKey !== 'YOUR_ACTUAL_API_KEY_HERE' && vaultApiKey.length > 15
+        });
         console.error('[MarketData] Environment fallbacks disabled - only Supabase Vault keys allowed');
       }
 
@@ -110,7 +125,20 @@ class MarketDataApiService implements OptionsDataProvider {
 
   // Check if API is configured
   isConfigured(): boolean {
-    return !!(this.apiKey || this.finnhubApiKey);
+    const hasApiKey = !!this.apiKey;
+    const hasFinnhubKey = !!this.finnhubApiKey;
+    const isConfigured = !!(this.apiKey || this.finnhubApiKey);
+    
+    console.log(`[MarketData] Configuration check:`, {
+      hasApiKey,
+      hasFinnhubKey,
+      isConfigured,
+      apiKeyLength: this.apiKey?.length || 0,
+      finnhubKeyLength: this.finnhubApiKey?.length || 0,
+      environment: process.env.NODE_ENV
+    });
+    
+    return isConfigured;
   }
 
   // Check if MarketData.app specifically is configured
