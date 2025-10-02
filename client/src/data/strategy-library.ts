@@ -389,7 +389,7 @@ export const STRATEGY_LIBRARY: StrategyDefinition[] = [
   },
   {
     id: 'diagonal-income',
-    name: 'Poor Man''s Covered Call (Diagonal)',
+    name: "Poor Man's Covered Call (Diagonal)",
     complexity: 'intermediate',
     summary: 'Use a deep ITM long call to mimic stock and sell shorter calls for recurring income.',
     marketView: 'Moderately bullish with desire for capital efficiency versus owning shares.',
