@@ -451,7 +451,8 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
         <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
           EXPECTED WEEKLY RANGE
         </h4>
-        {position.expectedMove?.weeklyLow && position.expectedMove?.weeklyHigh ? (
+        {position.expectedMove?.weeklyLow && position.expectedMove?.weeklyHigh && 
+         position.expectedMove.weeklyLow > 0 && position.expectedMove.weeklyHigh > 0 ? (
           <>
             <div className="flex justify-between items-center mb-2 bg-purple-50 border border-purple-200 rounded-lg p-3">
               <div className="text-left">
@@ -499,72 +500,52 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
             </div>
           </>
         ) : (
-          // Loading skeleton
-          <div className="animate-pulse">
-            <div className="flex justify-between items-center mb-2 bg-gray-100 border border-gray-200 rounded-lg p-3">
-              <div className="text-left">
-                <div className="h-6 bg-gray-300 rounded w-16 mb-1"></div>
-                <div className="h-3 bg-gray-200 rounded w-12"></div>
-              </div>
-              <div className="flex-1 mx-3 h-1 bg-gray-300 rounded-full"></div>
-              <div className="text-right">
-                <div className="h-6 bg-gray-300 rounded w-16 mb-1"></div>
-                <div className="h-3 bg-gray-200 rounded w-12"></div>
-              </div>
+          // No expected move data available
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+            <div className="text-sm text-muted-foreground">
+              Expected move data not available
             </div>
-            
-            {/* Loading skeleton for metrics */}
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <div className="bg-gray-50 border border-gray-100 rounded-lg p-2 text-center">
-                <div className="h-5 bg-gray-300 rounded w-12 mx-auto mb-1"></div>
-                <div className="h-3 bg-gray-200 rounded w-16 mx-auto"></div>
-              </div>
-              <div className="bg-gray-50 border border-gray-100 rounded-lg p-2 text-center">
-                <div className="h-5 bg-gray-300 rounded w-12 mx-auto mb-1"></div>
-                <div className="h-3 bg-gray-200 rounded w-16 mx-auto"></div>
-              </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Market data required for volatility calculations
             </div>
           </div>
         )}
       </div>
 
-      {/* Current P&L Section */}
+      {/* Current P&L Section - Single Row */}
       {currentPL && (
         <div className="mb-4">
-          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-            CURRENT POSITION VALUE
-          </h4>
-          <div className={`border rounded-lg p-3 ${
+          <div className={`border rounded-lg p-2 ${
             currentPL.isProfit 
               ? 'bg-green-50 border-green-200' 
               : currentPL.isAtBreakeven 
                 ? 'bg-yellow-50 border-yellow-200'
                 : 'bg-red-50 border-red-200'
           }`}>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <div className={`text-2xl font-bold ${
-                  currentPL.isProfit ? 'text-green-600' : 
-                  currentPL.isAtBreakeven ? 'text-yellow-600' : 'text-red-600'
-                }`} data-testid={`text-current-pl-${ticker.symbol}`}>
-                  {currentPL.unrealizedPL >= 0 ? '+' : ''}${currentPL.unrealizedPL.toFixed(2)}
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-4">
+                <div>
+                  <div className={`text-lg font-bold ${
+                    currentPL.isProfit ? 'text-green-600' : 
+                    currentPL.isAtBreakeven ? 'text-yellow-600' : 'text-red-600'
+                  }`} data-testid={`text-current-pl-${ticker.symbol}`}>
+                    {currentPL.unrealizedPL >= 0 ? '+' : ''}${currentPL.unrealizedPL.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">P&L</div>
                 </div>
-                <div className="text-xs text-muted-foreground">Unrealized P&L</div>
-              </div>
-              <div className="text-center">
-                <div className={`text-lg font-bold ${
-                  currentPL.isProfit ? 'text-green-600' : 
-                  currentPL.isAtBreakeven ? 'text-yellow-600' : 'text-red-600'
-                }`} data-testid={`text-current-return-${ticker.symbol}`}>
-                  {currentPL.percentReturn >= 0 ? '+' : ''}{currentPL.percentReturn.toFixed(1)}%
+                <div>
+                  <div className={`text-lg font-bold ${
+                    currentPL.isProfit ? 'text-green-600' : 
+                    currentPL.isAtBreakeven ? 'text-yellow-600' : 'text-red-600'
+                  }`} data-testid={`text-current-return-${ticker.symbol}`}>
+                    {currentPL.percentReturn >= 0 ? '+' : ''}{currentPL.percentReturn.toFixed(1)}%
+                  </div>
+                  <div className="text-xs text-muted-foreground">Return</div>
                 </div>
-                <div className="text-xs text-muted-foreground">Return</div>
               </div>
-            </div>
-            <div className="mt-2 pt-2 border-t border-gray-200">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Entry Cost: ${currentPL.entryCost.toFixed(2)}</span>
-                <span>Current Value: ${currentPL.currentValue.toFixed(2)}</span>
+              <div className="text-right text-xs text-muted-foreground">
+                <div>Entry: ${currentPL.entryCost.toFixed(0)}</div>
+                <div>Value: ${currentPL.currentValue.toFixed(0)}</div>
               </div>
             </div>
           </div>
