@@ -73,39 +73,38 @@ class MarketDataApiService implements OptionsDataProvider {
   // Initialize API keys from Supabase Vault
   async initialize(): Promise<void> {
     try {
-      
-      // FORCE CLEAR existing keys to prevent cache issues
       this.apiKey = '';
       this.finnhubApiKey = '';
-      
-      // Load MarketData API key from Supabase Vault first
+
       const vaultApiKey = await SupabaseSecrets.getSecret('MARKETDATA_API_KEY');
-      const keyPreview = vaultApiKey ? `${vaultApiKey.substring(0, 4)}...${vaultApiKey.slice(-4)}` : 'null';
-      
-      if (vaultApiKey && 
-          vaultApiKey !== 'demo-key' && 
-          vaultApiKey !== 'YOUR_ACTUAL_API_KEY_HERE' &&
-          vaultApiKey.length > 15) {
+      if (
+        vaultApiKey &&
+        vaultApiKey !== 'demo-key' &&
+        vaultApiKey !== 'YOUR_ACTUAL_API_KEY_HERE' &&
+        vaultApiKey.length > 15
+      ) {
         this.apiKey = vaultApiKey;
-        const keyPreview = vaultApiKey.substring(0, 8) + '...' + vaultApiKey.substring(vaultApiKey.length - 4);
+        this.logInfo('Loaded MarketData API key from Supabase Vault');
+      } else {
         console.error('[MarketData] No valid MarketData API key found in Supabase Vault', { value: vaultApiKey });
         console.error('[MarketData] Environment fallbacks disabled - only Supabase Vault keys allowed');
-      
-      // Load Finnhub API key from Supabase Vault ONLY
+      }
+
       const vaultFinnhubKey = await SupabaseSecrets.getSecret('FINNHUB_API_KEY');
       if (vaultFinnhubKey && vaultFinnhubKey.length > 10) {
         this.finnhubApiKey = vaultFinnhubKey;
+        this.logInfo('Loaded Finnhub API key from Supabase Vault');
+      } else {
         console.error('[MarketData] No valid Finnhub API key found in Supabase Vault');
         console.error('[MarketData] Environment fallbacks disabled - only Supabase Vault keys allowed');
-      
-      // FINAL VALIDATION
-      
+      }
+
       if (!this.apiKey && !this.finnhubApiKey) {
         console.error('[MarketData] No market data API keys found in Supabase Vault');
         console.error('[MarketData] Environment variable access disabled for enhanced security');
+      }
     } catch (error) {
       console.error('[MarketData] Failed to load API keys from Vault', error);
-      // Keep existing environment keys if any
     }
   }
 
@@ -213,6 +212,7 @@ class MarketDataApiService implements OptionsDataProvider {
       throw error;
     }
   }
+
   // Get current stock price with change data - Use Finnhub FIRST for complete quote data
   async getStockQuote(symbol: string): Promise<{ currentPrice: number; change: number; changePercent: number } | null> {
     if (this.isFinnhubConfigured()) {
