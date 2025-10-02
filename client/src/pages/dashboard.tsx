@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Wifi, WifiOff, X, CalendarDays, LogOut, User, BookOpen, Grid3X3, List, HelpCircle, RefreshCw, BarChart2, Activity } from "lucide-react";
+import { Wifi, WifiOff, X, CalendarDays, LogOut, User, BookOpen, Grid3X3, List, HelpCircle, RefreshCw, BarChart2, Activity, Target } from "lucide-react";
 import { TickerCard } from "@/components/ticker-card";
 import { TickerList } from "@/components/ticker-list";
 import { TickerSearch } from "@/components/ticker-search";
@@ -647,6 +647,14 @@ export default function Dashboard() {
                 <BarChart2 className="h-4 w-4 mr-2" />
                 Compare
               </Button>
+
+              {/* Strategy Builder */}
+              <Link href="/strategy-builder">
+                <Button variant="outline" size="sm" data-testid="button-strategy-builder" className="mobile-button">
+                  <Target className="h-4 w-4 mr-2" />
+                  Builder
+                </Button>
+              </Link>
 
               {/* Learning Path */}
               <Link href="/learning">

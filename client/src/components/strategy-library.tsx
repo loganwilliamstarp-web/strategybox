@@ -64,14 +64,18 @@ const getActiveSummary = (
 };
 
 export function StrategyLibrary({ activeStrategies }: StrategyLibraryProps) {
+  // Constants for layout
+  const STRATEGIES_PER_PAGE = 6; // Keep for infinite scroll logic
+  const STRATEGIES_PER_ROW = 3; // 3 columns
+  const VISIBLE_ROWS = 2; // Show 2 rows at a time
+  const MAX_VISIBLE_STRATEGIES = STRATEGIES_PER_ROW * VISIBLE_ROWS; // 6 strategies visible
+
   const [complexityFilter, setComplexityFilter] = useState<ComplexityFilterValue>('all');
   const [strategyFilter, setStrategyFilter] = useState<StrategyFilterValue>('all');
-  const [displayedCount, setDisplayedCount] = useState(6);
+  const [displayedCount, setDisplayedCount] = useState(MAX_VISIBLE_STRATEGIES);
   const [isLoading, setIsLoading] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
-  const STRATEGIES_PER_PAGE = 6;
 
   const groupedStrategies = useMemo(() => {
     return COMPLEXITY_SEQUENCE.map((complexity) => ({
@@ -103,7 +107,7 @@ export function StrategyLibrary({ activeStrategies }: StrategyLibraryProps) {
 
   // Reset displayed count when filters change
   useEffect(() => {
-    setDisplayedCount(STRATEGIES_PER_PAGE);
+    setDisplayedCount(MAX_VISIBLE_STRATEGIES);
   }, [complexityFilter, strategyFilter]);
 
   // Load more strategies
@@ -240,7 +244,10 @@ export function StrategyLibrary({ activeStrategies }: StrategyLibraryProps) {
         </div>
 
         <div className="text-xs text-muted-foreground">
-          Showing {displayedStrategies.length} of {filteredStrategies.length} strategies — {activeComplexityLabel}.
+          Showing {displayedStrategies.length} of {filteredStrategies.length} strategies — {activeComplexityLabel}. 
+          {displayedStrategies.length > MAX_VISIBLE_STRATEGIES && (
+            <span className="text-blue-600"> Scroll within the section to see all strategies.</span>
+          )}
         </div>
 
         {filteredStrategies.length === 0 ? (
@@ -248,8 +255,16 @@ export function StrategyLibrary({ activeStrategies }: StrategyLibraryProps) {
             No strategies match the current filter selection.
           </div>
         ) : (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {displayedStrategies.map((strategy) => {
+          <div className="relative">
+            {/* Fixed height container with scroll */}
+            <div 
+              className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+              style={{ 
+                height: `${VISIBLE_ROWS * 280}px`, // Approximate height for 2 rows
+                maxHeight: '560px' // Maximum height constraint
+              }}
+            >
+              {displayedStrategies.map((strategy) => {
               const usage = getActiveSummary(strategy.id, portfolioUsage);
               const tickers = usage?.tickers ?? [];
               const previewTickers = tickers.slice(0, 3).join(', ');
@@ -315,7 +330,15 @@ export function StrategyLibrary({ activeStrategies }: StrategyLibraryProps) {
                   </div>
                 </Card>
               );
-            })}
+              })}
+            </div>
+            
+            {/* Scroll indicator */}
+            {displayedStrategies.length > MAX_VISIBLE_STRATEGIES && (
+              <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 text-xs text-muted-foreground border shadow-sm">
+                Scroll to see more ({displayedStrategies.length - MAX_VISIBLE_STRATEGIES} more)
+              </div>
+            )}
           </div>
         )}
 

@@ -8,6 +8,7 @@ import Landing from "@/pages/landing";
 import AuthPage from "@/pages/auth-page";
 import NotFound from "@/pages/not-found";
 import LearningPage from "@/pages/learning";
+import StrategyBuilder from "@/pages/strategy-builder";
 import { useAuth } from "@/hooks/useAuth";
 import { useCapacitor } from "@/hooks/useCapacitor";
 
@@ -33,6 +34,7 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/learning" component={LearningPage} />
+          <Route path="/strategy-builder" component={StrategyBuilder} />
         </>
       )}
       <Route component={NotFound} />
