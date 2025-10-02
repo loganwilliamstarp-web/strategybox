@@ -48,8 +48,8 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
   const isPositiveChange = ticker.priceChange >= 0;
   const { isNative, triggerHaptics } = useCapacitor();
   
-  // Debug component re-renders
-  console.log(`🔄 TickerCard re-render for ${ticker.symbol} at ${new Date().toISOString()}`);
+  // Debug component re-renders (disabled to prevent excessive logging)
+  // console.log(`🔄 TickerCard re-render for ${ticker.symbol} at ${new Date().toISOString()}`);
 
   
   // Fetch individual IV values for the specific strikes
@@ -94,10 +94,16 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
   }, [position, ticker.currentPrice, liveGreeks]);
   
   // Fetch individual IV values and live Greeks when component mounts or ticker changes
+  // CRITICAL FIX: Only fetch once per ticker/position, not on every render
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchLiveData = async () => {
       try {
+        console.log(`🔍 Fetching live Greeks for ${ticker.symbol} - expiration: ${position.expirationDate}`);
         const chainData = await apiRequestWithAuth(`/api/options-chain/${ticker.symbol}?expiration=${position.expirationDate}`);
+        
+        if (!isMounted) return; // Prevent state updates if component unmounted
         
         if (chainData) {
           const expiration = position.expirationDate;
@@ -146,27 +152,34 @@ const TickerCard = memo(function TickerCard({ ticker, onViewOptions, onViewVolat
       }
     };
     
-    fetchLiveData();
-  }, [ticker.symbol, position.expirationDate, position.longCallStrike, position.longPutStrike]);
+    // Only fetch if we don't already have data
+    if (!liveGreeks && !individualIV) {
+      fetchLiveData();
+    }
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [ticker.symbol, position.expirationDate]); // REMOVED position.longCallStrike, position.longPutStrike to prevent excessive calls
   
-  // Debug strategy type issues
-  console.log(`🎯 TickerCard Debug for ${ticker.symbol}:`, {
-    strategyType: position?.strategyType,
-    longPutStrike: position?.longPutStrike,
-    longCallStrike: position?.longCallStrike,
-    shortPutStrike: position?.shortPutStrike,
-    shortCallStrike: position?.shortCallStrike
-  });
+  // Debug strategy type issues (disabled to prevent excessive logging)
+  // console.log(`🎯 TickerCard Debug for ${ticker.symbol}:`, {
+  //   strategyType: position?.strategyType,
+  //   longPutStrike: position?.longPutStrike,
+  //   longCallStrike: position?.longCallStrike,
+  //   shortPutStrike: position?.shortPutStrike,
+  //   shortCallStrike: position?.shortCallStrike
+  // });
   
-  // Debug price data
-  console.log(`💰 Price Debug for ${ticker.symbol}:`, {
-    currentPrice: ticker.currentPrice,
-    priceChange: ticker.priceChange,
-    priceChangePercent: ticker.priceChangePercent,
-    lastUpdated: ticker.updatedAt,
-    tickerId: ticker.id,
-    timestamp: new Date().toISOString()
-  });
+  // Debug price data (disabled to prevent excessive logging)
+  // console.log(`💰 Price Debug for ${ticker.symbol}:`, {
+  //   currentPrice: ticker.currentPrice,
+  //   priceChange: ticker.priceChange,
+  //   priceChangePercent: ticker.priceChangePercent,
+  //   lastUpdated: ticker.updatedAt,
+  //   tickerId: ticker.id,
+  //   timestamp: new Date().toISOString()
+  // });
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
