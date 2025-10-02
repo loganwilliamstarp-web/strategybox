@@ -13,6 +13,7 @@ import { ImportSettings } from "@/components/import-settings";
 import { ExportInsights } from "@/components/export-insights";
 import { TradingTips } from "@/components/trading-tips";
 import { StrategyScreener } from "@/components/strategy-screener";
+import { StrategyLibrary } from "@/components/strategy-library";
 import { MarketSentiment } from "@/components/market-sentiment";
 import { PerformanceStoryTeller } from "@/components/performance-storyteller";
 import { RiskMeter } from "@/components/risk-meter";
@@ -890,6 +891,10 @@ export default function Dashboard() {
             <PerformanceStoryTeller tickers={tickers} summary={filteredPortfolio} />
           </div>
         )}
+
+        <div className="mb-6">
+          <StrategyLibrary />
+        </div>
 
         {/* Strategy Screener */}
         <div className="mb-6">
